@@ -10,7 +10,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Database(
-    entities = [Exercise::class, WorkoutSession::class, ExerciseLog::class],
+    entities = [
+        Exercise::class,
+        WorkoutSession::class,
+        ExerciseLog::class,
+        WorkoutTemplate::class,
+        TemplateExercise::class
+    ],
     version = 1,
     exportSchema = false
 )
@@ -18,6 +24,7 @@ abstract class AppDatabase : RoomDatabase() {
 
     abstract fun exerciseDao(): ExerciseDao
     abstract fun workoutDao(): WorkoutDao
+    abstract fun templateDao(): TemplateDao
 
     companion object {
         @Volatile private var INSTANCE: AppDatabase? = null
