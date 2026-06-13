@@ -78,7 +78,11 @@ fun GymTrackerApp() {
             composable("workout/{sessionId}/{sessionName}") { backStack ->
                 val sessionId = backStack.arguments?.getString("sessionId")?.toLong() ?: return@composable
                 val sessionName = backStack.arguments?.getString("sessionName") ?: "Workout"
-                WorkoutScreen(sessionId = sessionId, sessionName = sessionName)
+                WorkoutScreen(
+                    sessionId = sessionId,
+                    sessionName = sessionName,
+                    onFinish = { navController.popBackStack() }
+                )
             }
             composable(Screen.Templates.route) { TemplatesScreen() }
             composable(Screen.Progress.route) { ProgressScreen() }

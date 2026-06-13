@@ -34,3 +34,4 @@ androidx-datastore = { group = "androidx.datastore", name = "datastore-preferenc
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version = "2.3.10" }

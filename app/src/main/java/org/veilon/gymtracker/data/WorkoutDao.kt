@@ -17,6 +17,9 @@ interface WorkoutDao {
     @Insert
     suspend fun insertLog(log: ExerciseLog): Long
 
+    @Update
+    suspend fun updateLog(log: ExerciseLog)
+
     @Query("SELECT * FROM exercise_logs WHERE sessionId = :sessionId ORDER BY setNumber ASC")
     fun getLogsForSession(sessionId: Long): Flow<List<ExerciseLog>>
 
@@ -29,4 +32,10 @@ interface WorkoutDao {
 
     @Delete
     suspend fun deleteLog(log: ExerciseLog)
+
+    @Query("DELETE FROM exercise_logs WHERE sessionId = :sessionId AND exerciseId = :exerciseId")
+    suspend fun deleteExerciseFromSession(sessionId: Long, exerciseId: Long)
+
+    @Query("DELETE FROM exercise_logs WHERE sessionId = :sessionId AND completed = 0")
+    suspend fun deleteIncompleteLogs(sessionId: Long)
 }

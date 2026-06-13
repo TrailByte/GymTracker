@@ -26,5 +26,6 @@ data class ExerciseLog(
     val exerciseId: Long,
     val setNumber: Int,
     val reps: Int,
-    val weight: Double
+    val weight: Double,
+    val completed: Boolean = false
 )
