@@ -15,6 +15,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import org.veilon.gymtracker.ui.HomeViewModel
 import java.text.SimpleDateFormat
 import java.util.*
+import org.veilon.gymtracker.ui.theme.ScreenTitle
 
 @Composable
 fun HomeScreen(
@@ -121,8 +122,7 @@ fun HomeScreen(
             contentPadding = PaddingValues(vertical = 16.dp)
         ) {
             item {
-                Text("Recent Workouts", style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold)
+                ScreenTitle("Recent Workouts")
                 Spacer(Modifier.height(8.dp))
             }
             if (sessions.isEmpty()) {

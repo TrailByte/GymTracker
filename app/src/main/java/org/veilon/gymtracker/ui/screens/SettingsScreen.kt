@@ -9,6 +9,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.veilon.gymtracker.ui.SettingsViewModel
+import org.veilon.gymtracker.ui.theme.ScreenTitle
 
 @Composable
 fun SettingsScreen(viewModel: SettingsViewModel = viewModel()) {
@@ -19,8 +20,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel()) {
         modifier = Modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text("Settings", style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold)
+        ScreenTitle("Settings")
 
         // Weight unit
         Card(Modifier.fillMaxWidth()) {

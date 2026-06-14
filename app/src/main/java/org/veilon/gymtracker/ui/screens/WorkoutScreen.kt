@@ -22,6 +22,7 @@ import org.veilon.gymtracker.data.ExerciseLog
 import org.veilon.gymtracker.ui.WorkoutViewModel
 import org.veilon.gymtracker.ui.displayWeight
 import org.veilon.gymtracker.ui.toKg
+import org.veilon.gymtracker.ui.theme.ScreenTitle
 
 @Composable
 fun WorkoutScreen(
@@ -152,9 +153,9 @@ fun WorkoutScreen(
         ) {
             item {
                 Column {
-                    Text(sessionName, style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold)
+                    ScreenTitle(sessionName)
                     Text(formatElapsed(elapsed), style = MaterialTheme.typography.bodySmall,
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                     TextButton(
                         onClick = { showRestConfig = true },
@@ -293,7 +294,8 @@ fun SetRow(
             },
             modifier = Modifier.weight(1f).padding(end = 4.dp),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            singleLine = true
+            singleLine = true,
+            textStyle = androidx.compose.ui.text.TextStyle(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
         )
         OutlinedTextField(
             value = weightText,
@@ -305,7 +307,8 @@ fun SetRow(
             },
             modifier = Modifier.weight(1f).padding(end = 4.dp),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-            singleLine = true
+            singleLine = true,
+            textStyle = androidx.compose.ui.text.TextStyle(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
         )
         Box(Modifier.weight(0.6f), contentAlignment = Alignment.Center) {
             IconButton(onClick = { onToggle(log) }) {
@@ -329,7 +332,7 @@ fun RestTimerCard(seconds: Int, onAddTime: () -> Unit, onSkip: () -> Unit) {
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
     ) {
         Column(Modifier.padding(16.dp)) {
-            Text("Rest", style = MaterialTheme.typography.labelMedium,
+            Text("Rest", fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace, style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onPrimaryContainer)
             Text(String.format("%d:%02d", mins, secs),
                 style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold,
@@ -369,7 +372,8 @@ fun ExercisePickerDialog(
                     onValueChange = { query = it },
                     label = { Text("Search") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = androidx.compose.ui.text.TextStyle(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
                 )
                 Spacer(Modifier.height(8.dp))
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {

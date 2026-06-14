@@ -14,6 +14,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.veilon.gymtracker.ui.TemplatesViewModel
+import org.veilon.gymtracker.ui.theme.ScreenTitle
 
 @Composable
 fun TemplatesScreen(
@@ -64,8 +65,7 @@ fun TemplatesScreen(
             contentPadding = PaddingValues(vertical = 16.dp)
         ) {
             item {
-                Text("Templates", style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold)
+                ScreenTitle("Templates")
                 Spacer(Modifier.height(8.dp))
             }
             if (templates.isEmpty()) {
