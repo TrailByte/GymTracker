@@ -33,7 +33,6 @@ fun HomeScreen(
     onOpenSession: (Long) -> Unit,
     viewModel: HomeViewModel = viewModel()
 ) {
-    val sessions by viewModel.recentSessions.collectAsState()
     val templates by viewModel.templates.collectAsState()
     val stats by viewModel.stats.collectAsState()
     val useLbs by viewModel.useLbs.collectAsState()
@@ -154,32 +153,6 @@ fun HomeScreen(
             }
             items(stats.prs) { pr ->
                 PRCard(pr, useLbs)
-            }
-        }
-
-        // Recent workouts
-        item {
-            Text("RECENT WORKOUTS", style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        if (sessions.isEmpty()) {
-            item {
-                Text("No workouts yet. Hit Start!",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        } else {
-            items(sessions.take(5)) { session ->
-                val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
-                val date = remember(session.date, locale) {
-                    SimpleDateFormat("EEE, MMM d · h:mm a", locale).format(Date(session.date))
-                }
-                Card(modifier = Modifier.fillMaxWidth(), onClick = { onOpenSession(session.id) }) {
-                    Column(Modifier.padding(16.dp)) {
-                        Text(session.name, fontWeight = FontWeight.SemiBold)
-                        Text(date, style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
             }
         }
     }

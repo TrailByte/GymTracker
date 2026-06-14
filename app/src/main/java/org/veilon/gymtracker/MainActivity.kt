@@ -89,19 +89,13 @@ fun GymTrackerApp(activeVm: ActiveWorkoutViewModel = viewModel()) {
             composable(Screen.Home.route) {
                 HomeScreen(
                     onStartEmpty = { name ->
-                        activeVm.startEmpty(name) {
-                            navController.navigate(Screen.Log.route) {
-                                popUpTo(Screen.Home.route) { saveState = true }
-                                launchSingleTop = true
-                            }
+                        activeVm.startEmpty(name) { newId ->
+                            navController.navigate("workout/$newId")
                         }
                     },
                     onStartFromTemplate = { templateId, name ->
-                        activeVm.startFromTemplate(templateId, name) {
-                            navController.navigate(Screen.Log.route) {
-                                popUpTo(Screen.Home.route) { saveState = true }
-                                launchSingleTop = true
-                            }
+                        activeVm.startFromTemplate(templateId, name) { newId ->
+                            navController.navigate("workout/$newId")
                         }
                     },
                     onOpenSession = { sessionId ->
@@ -111,13 +105,17 @@ fun GymTrackerApp(activeVm: ActiveWorkoutViewModel = viewModel()) {
             }
             composable(Screen.Log.route) {
                 LogScreen(
-                    activeSessionId = activeSessionId,
-                    onClearActive = { activeVm.clearActive() },
-                    onGoToHome = {
-                        navController.navigate(Screen.Home.route) {
-                            popUpTo(Screen.Home.route) { saveState = true }
-                            launchSingleTop = true
-                        }
+                    onResumeActive = { sessionId -> navController.navigate("workout/$sessionId") },
+                    onOpenSession = { sessionId -> navController.navigate("session/$sessionId") }
+                )
+            }
+            composable("workout/{sessionId}") { backStack ->
+                val sessionId = backStack.arguments?.getString("sessionId")?.toLong() ?: return@composable
+                WorkoutScreen(
+                    sessionId = sessionId,
+                    onFinish = {
+                        activeVm.clearActive()
+                        navController.popBackStack()
                     }
                 )
             }
