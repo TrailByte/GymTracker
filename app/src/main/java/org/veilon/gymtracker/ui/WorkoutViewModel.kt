@@ -7,22 +7,26 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.veilon.gymtracker.data.AppDatabase
 import org.veilon.gymtracker.data.Exercise
 import org.veilon.gymtracker.data.ExerciseLog
+import org.veilon.gymtracker.data.WorkoutSession
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.foundation.lazy.rememberLazyListState
 
 class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
 
     private val workoutDao = AppDatabase.getInstance(app).workoutDao()
     private val exerciseDao = AppDatabase.getInstance(app).exerciseDao()
+    private val appContext = app.applicationContext
 
     val exercises = exerciseDao.getAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // Weight unit preference (true = lbs, false = kg)
     val useLbs = UserPreferences.useLbs(app)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
@@ -39,14 +43,28 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
     private val _restTimerSeconds = MutableStateFlow<Int?>(null)
     val restTimerSeconds = _restTimerSeconds.asStateFlow()
 
+    // Per-session rest duration, initialized from the global default
+    private val _restDuration = MutableStateFlow(90)
+    val restDuration = _restDuration.asStateFlow()
+
     private val _elapsedSeconds = MutableStateFlow(0)
     val elapsedSeconds = _elapsedSeconds.asStateFlow()
+
+    init {
+        // Seed the per-session duration from the saved global default
+        viewModelScope.launch {
+            _restDuration.value = UserPreferences.restSeconds(appContext).first()
+        }
+    }
 
     fun setSession(sessionId: Long) {
         _currentSessionId.value = sessionId
     }
 
-    // Add a new empty set for an exercise (weight stored in kg)
+    fun setRestDuration(seconds: Int) {
+        _restDuration.value = seconds.coerceAtLeast(0)
+    }
+
     fun addSet(sessionId: Long, exercise: Exercise) {
         viewModelScope.launch {
             val nextSet = logs.value.count { it.exerciseId == exercise.id } + 1
@@ -63,20 +81,18 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    // Edit reps/weight inline. weightKg is already converted to kg by the UI.
     fun updateSet(log: ExerciseLog, reps: Int, weightKg: Double) {
         viewModelScope.launch {
             workoutDao.updateLog(log.copy(reps = reps, weight = weightKg))
         }
     }
 
-    // Toggle the completed checkmark; starting rest only when marking ON
     fun toggleComplete(log: ExerciseLog) {
         viewModelScope.launch {
             val nowComplete = !log.completed
             workoutDao.updateLog(log.copy(completed = nowComplete))
             if (nowComplete) {
-                _restTimerSeconds.value = 90
+                _restTimerSeconds.value = _restDuration.value
             }
         }
     }
@@ -91,17 +107,24 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    // Finish: optionally discard any sets the user never marked complete
     fun finishWorkout(sessionId: Long, discardIncomplete: Boolean, onDone: () -> Unit) {
         viewModelScope.launch {
             if (discardIncomplete) {
                 workoutDao.deleteIncompleteLogs(sessionId)
             } else {
-                // Mark everything complete
                 logs.value.filter { !it.completed }.forEach {
                     workoutDao.updateLog(it.copy(completed = true))
                 }
             }
+            _restTimerSeconds.value = null
+            onDone()
+        }
+    }
+
+    // Cancel: delete the whole session (CASCADE removes its logs)
+    fun cancelWorkout(sessionId: Long, onDone: () -> Unit) {
+        viewModelScope.launch {
+            workoutDao.deleteSession(WorkoutSession(id = sessionId, name = "", date = 0))
             _restTimerSeconds.value = null
             onDone()
         }
