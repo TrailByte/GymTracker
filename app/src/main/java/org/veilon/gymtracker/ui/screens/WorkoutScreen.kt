@@ -23,7 +23,6 @@ import org.veilon.gymtracker.ui.WorkoutViewModel
 import org.veilon.gymtracker.ui.displayWeight
 import org.veilon.gymtracker.ui.toKg
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WorkoutScreen(
     sessionId: Long,
@@ -38,9 +37,12 @@ fun WorkoutScreen(
     val restTimer by viewModel.restTimerSeconds.collectAsState()
     val elapsed by viewModel.elapsedSeconds.collectAsState()
     val useLbs by viewModel.useLbs.collectAsState()
+    val restDuration by viewModel.restDuration.collectAsState()
 
     var showExercisePicker by remember { mutableStateOf(false) }
     var showFinishDialog by remember { mutableStateOf(false) }
+    var showCancelDialog by remember { mutableStateOf(false) }
+    var showRestConfig by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         while (true) { delay(1000); viewModel.tickElapsed() }
@@ -91,6 +93,45 @@ fun WorkoutScreen(
         }
     }
 
+    if (showCancelDialog) {
+        AlertDialog(
+            onDismissRequest = { showCancelDialog = false },
+            title = { Text("Cancel workout?") },
+            text = { Text("This will discard the entire workout and everything logged in it.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.cancelWorkout(sessionId) {
+                        showCancelDialog = false; onFinish()
+                    }
+                }) { Text("Discard workout") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCancelDialog = false }) { Text("Keep going") }
+            }
+        )
+    }
+
+    if (showRestConfig) {
+        AlertDialog(
+            onDismissRequest = { showRestConfig = false },
+            title = { Text("Rest duration") },
+            text = {
+                Row(verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    OutlinedButton(onClick = { viewModel.setRestDuration(restDuration - 15) }) {
+                        Text("-15s")
+                    }
+                    Text("${restDuration / 60}:${String.format("%02d", restDuration % 60)}",
+                        style = MaterialTheme.typography.titleLarge)
+                    OutlinedButton(onClick = { viewModel.setRestDuration(restDuration + 15) }) {
+                        Text("+15s")
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showRestConfig = false }) { Text("Done") } }
+        )
+    }
+
     val unitLabel = if (useLbs) "lbs" else "kg"
 
     Scaffold { padding ->
@@ -105,6 +146,12 @@ fun WorkoutScreen(
                         fontWeight = FontWeight.Bold)
                     Text(formatElapsed(elapsed), style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    TextButton(
+                        onClick = { showRestConfig = true },
+                        contentPadding = PaddingValues(0.dp)
+                    ) {
+                        Text("Rest: ${restDuration / 60}:${String.format("%02d", restDuration % 60)} (tap to change)")
+                    }
                 }
                 Spacer(Modifier.height(8.dp))
             }
@@ -148,17 +195,25 @@ fun WorkoutScreen(
                 }
             }
             item {
-                Button(
-                    onClick = { showFinishDialog = true },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = logs.isNotEmpty()
-                ) { Text("Finish Workout") }
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = { showCancelDialog = true },
+                        modifier = Modifier.weight(1f)
+                    ) { Text("Cancel") }
+                    Button(
+                        onClick = { showFinishDialog = true },
+                        modifier = Modifier.weight(1f),
+                        enabled = logs.isNotEmpty()
+                    ) { Text("Finish") }
+                }
             }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExerciseSetCard(
     exercise: Exercise,
@@ -283,21 +338,41 @@ fun ExercisePickerDialog(
     onDismiss: () -> Unit,
     onPick: (Exercise) -> Unit
 ) {
-    val grouped = exercises.groupBy { it.muscleGroup }
+    var query by remember { mutableStateOf("") }
+    val filtered = remember(query, exercises) {
+        if (query.isBlank()) exercises
+        else exercises.filter {
+            it.name.contains(query, ignoreCase = true) ||
+                    it.muscleGroup.contains(query, ignoreCase = true)
+        }
+    }
+    val grouped = filtered.groupBy { it.muscleGroup }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Pick Exercise") },
         text = {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                grouped.forEach { (group, exList) ->
-                    item {
-                        Text(group, style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(top = 8.dp))
-                    }
-                    items(exList) { ex ->
-                        TextButton(onClick = { onPick(ex) }, modifier = Modifier.fillMaxWidth()) {
-                            Text(ex.name)
+            Column {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    label = { Text("Search") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(8.dp))
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    grouped.forEach { (group, exList) ->
+                        item {
+                            Text(group, style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(top = 8.dp))
+                        }
+                        items(exList) { ex ->
+                            TextButton(onClick = { onPick(ex) },
+                                modifier = Modifier.fillMaxWidth()) {
+                                Text(ex.name, modifier = Modifier.fillMaxWidth())
+                            }
                         }
                     }
                 }
