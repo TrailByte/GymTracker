@@ -61,7 +61,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel()) {
                         Text("-15s")
                     }
                     Text(
-                        "${restSeconds / 60}:${String.format("%02d", restSeconds % 60)}",
+                        "${restSeconds / 60}:${String.format(java.util.Locale.US, "%02d", restSeconds % 60)}",
                         style = MaterialTheme.typography.titleLarge
                     )
                     OutlinedButton(onClick = { viewModel.setRestSeconds(restSeconds + 15) }) {
