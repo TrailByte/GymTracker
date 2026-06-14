@@ -38,6 +38,7 @@ fun WorkoutScreen(
     val elapsed by viewModel.elapsedSeconds.collectAsState()
     val useLbs by viewModel.useLbs.collectAsState()
     val restDuration by viewModel.restDuration.collectAsState()
+    val restForExerciseId by viewModel.restForExerciseId.collectAsState()
 
     var showExercisePicker by remember { mutableStateOf(false) }
     var showFinishDialog by remember { mutableStateOf(false) }
@@ -156,14 +157,6 @@ fun WorkoutScreen(
                 Spacer(Modifier.height(8.dp))
             }
 
-            restTimer?.let { secs ->
-                item {
-                    RestTimerCard(secs,
-                        onAddTime = { viewModel.addRestTime(15) },
-                        onSkip = { viewModel.skipRest() })
-                }
-            }
-
             val grouped = logs.groupBy { it.exerciseId }
             val orderedIds = logs.map { it.exerciseId }.distinct()
             items(orderedIds, key = { it }) { exerciseId ->
@@ -181,6 +174,15 @@ fun WorkoutScreen(
                         onDeleteSet = { log -> viewModel.deleteSet(log) },
                         onDeleteExercise = { viewModel.deleteExercise(sessionId, exerciseId) }
                     )
+                    // Rest timer appears under the exercise whose set was just completed
+                    if (restTimer != null && restForExerciseId == exerciseId) {
+                        Spacer(Modifier.height(8.dp))
+                        RestTimerCard(
+                            seconds = restTimer!!,
+                            onAddTime = { viewModel.addRestTime(15) },
+                            onSkip = { viewModel.skipRest() }
+                        )
+                    }
                 }
             }
 

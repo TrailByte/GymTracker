@@ -40,6 +40,8 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
 
     private val _restTimerSeconds = MutableStateFlow<Int?>(null)
     val restTimerSeconds = _restTimerSeconds.asStateFlow()
+    private val _restForExerciseId = MutableStateFlow<Long?>(null)
+    val restForExerciseId = _restForExerciseId.asStateFlow()
 
     // Per-session rest duration, initialized from the global default
     private val _restDuration = MutableStateFlow(90)
@@ -91,6 +93,7 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
             workoutDao.updateLog(log.copy(completed = nowComplete))
             if (nowComplete) {
                 _restTimerSeconds.value = _restDuration.value
+                _restForExerciseId.value = log.exerciseId
             }
         }
     }
@@ -128,17 +131,20 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun tickRestTimer() {
-        val current = _restTimerSeconds.value ?: return
-        _restTimerSeconds.value = if (current <= 1) null else current - 1
-    }
 
     fun addRestTime(seconds: Int) {
         _restTimerSeconds.value = (_restTimerSeconds.value ?: 0) + seconds
     }
 
+    fun tickRestTimer() {
+        val current = _restTimerSeconds.value ?: return
+        _restTimerSeconds.value = if (current <= 1) null else current - 1
+        if (_restTimerSeconds.value == null) _restForExerciseId.value = null
+    }
+
     fun skipRest() {
         _restTimerSeconds.value = null
+        _restForExerciseId.value = null
     }
 
     fun tickElapsed() {
