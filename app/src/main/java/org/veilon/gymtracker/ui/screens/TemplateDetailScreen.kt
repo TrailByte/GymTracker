@@ -26,7 +26,8 @@ fun TemplateDetailScreen(
     onBack: () -> Unit,
     viewModel: TemplatesViewModel = viewModel()
 ) {
-    val templateExercises by viewModel.templateExercises(templateId).collectAsState()
+    LaunchedEffect(templateId) { viewModel.setCurrentTemplate(templateId) }
+    val templateExercises by viewModel.currentTemplateExercises.collectAsState()
     val allExercises by viewModel.allExercises.collectAsState()
     var showPicker by remember { mutableStateOf(false) }
 
