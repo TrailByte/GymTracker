@@ -25,6 +25,7 @@ import org.veilon.gymtracker.ui.screens.*
 import org.veilon.gymtracker.ui.theme.GymTrackerTheme
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.foundation.layout.Column
 
 sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
     object Home : Screen("home", "Home", Icons.Default.Home)
@@ -55,27 +56,38 @@ fun GymTrackerApp(activeVm: ActiveWorkoutViewModel = viewModel()) {
     val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
 
     val activeSessionId by activeVm.activeSessionId.collectAsState()
+    val activeSession by activeVm.activeSession.collectAsState()
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
-            // Templates detail is a pushed route; hide bar there
             val showBar = currentRoute in tabs.map { it.route }
             if (showBar) {
-                NavigationBar {
-                    tabs.forEach { screen ->
-                        NavigationBarItem(
-                            selected = currentRoute == screen.route,
-                            onClick = {
-                                navController.navigate(screen.route) {
-                                    popUpTo(Screen.Home.route) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
-                            icon = { Icon(screen.icon, contentDescription = screen.label) },
-                            label = { Text(screen.label) }
+                Column {
+                    // Mini workout bar — only when a workout is active and not already on it
+                    val active = activeSession
+                    if (active != null && currentRoute != "workout/{sessionId}") {
+                        MiniWorkoutBar(
+                            sessionName = active.name,
+                            startTimeMillis = active.date,
+                            onExpand = { navController.navigate("workout/${active.id}") }
                         )
+                    }
+                    NavigationBar {
+                        tabs.forEach { screen ->
+                            NavigationBarItem(
+                                selected = currentRoute == screen.route,
+                                onClick = {
+                                    navController.navigate(screen.route) {
+                                        popUpTo(Screen.Home.route) { saveState = true }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                },
+                                icon = { Icon(screen.icon, contentDescription = screen.label) },
+                                label = { Text(screen.label) }
+                            )
+                        }
                     }
                 }
             }
@@ -116,7 +128,8 @@ fun GymTrackerApp(activeVm: ActiveWorkoutViewModel = viewModel()) {
                     onFinish = {
                         activeVm.clearActive()
                         navController.popBackStack()
-                    }
+                    },
+                    onMinimize = { navController.popBackStack() }
                 )
             }
             composable(Screen.Templates.route) {

@@ -145,7 +145,22 @@ fun WorkoutScreen(
 
     val unitLabel = if (useLbs) "lbs" else "kg"
 
-    Scaffold { padding ->
+        Scaffold(
+            topBar = {
+                @OptIn(ExperimentalMaterial3Api::class)
+                TopAppBar(
+                    title = { },
+                    navigationIcon = {
+                        IconButton(onClick = onMinimize) {
+                            Icon(
+                                androidx.compose.material.icons.Icons.Default.KeyboardArrowDown,
+                                contentDescription = "Minimize"
+                            )
+                        }
+                    }
+                )
+            }
+        ) { padding ->
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -347,10 +362,11 @@ fun RestTimerCard(seconds: Int, onAddTime: () -> Unit, onSkip: () -> Unit) {
 }
 
 @Composable
-fun ExercisePickerDialog(
-    exercises: List<Exercise>,
-    onDismiss: () -> Unit,
-    onPick: (Exercise) -> Unit
+fun WorkoutScreen(
+    sessionId: Long,
+    onFinish: () -> Unit,
+    onMinimize: () -> Unit,
+    viewModel: WorkoutViewModel = viewModel()
 ) {
     var query by remember { mutableStateOf("") }
     val filtered = remember(query, exercises) {

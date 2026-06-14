@@ -9,6 +9,8 @@ import kotlinx.coroutines.launch
 import org.veilon.gymtracker.data.AppDatabase
 import org.veilon.gymtracker.data.ExerciseLog
 import org.veilon.gymtracker.data.WorkoutSession
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 
 class ActiveWorkoutViewModel(app: Application) : AndroidViewModel(app) {
 
@@ -17,6 +19,14 @@ class ActiveWorkoutViewModel(app: Application) : AndroidViewModel(app) {
     private val templateDao = AppDatabase.getInstance(app).templateDao()
 
     val activeSessionId = UserPreferences.activeSession(app)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val activeSession = UserPreferences.activeSession(getApplication())
+        .flatMapLatest { id ->
+            if (id == null) kotlinx.coroutines.flow.flowOf(null)
+            else kotlinx.coroutines.flow.flowOf(workoutDao.getSession(id))
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     fun startEmpty(name: String, onStarted: (Long) -> Unit) {
