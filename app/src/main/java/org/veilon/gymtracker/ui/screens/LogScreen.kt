@@ -29,7 +29,6 @@ fun LogScreen(
     } else {
         WorkoutScreen(
             sessionId = activeSessionId,
-            sessionName = "Workout",
             onFinish = onClearActive
         )
     }

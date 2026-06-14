@@ -27,7 +27,6 @@ import org.veilon.gymtracker.ui.theme.ScreenTitle
 @Composable
 fun WorkoutScreen(
     sessionId: Long,
-    sessionName: String,
     onFinish: () -> Unit,
     viewModel: WorkoutViewModel = viewModel()
 ) {
@@ -40,6 +39,7 @@ fun WorkoutScreen(
     val restDuration by viewModel.restDuration.collectAsState()
     val restForExerciseId by viewModel.restForExerciseId.collectAsState()
     val startTime by viewModel.startTime.collectAsState()
+    val sessionName by viewModel.sessionName.collectAsState()
     // A ticking "now" that updates every second while this screen is visible.
     // Elapsed is computed as now - startTime, so leaving/returning stays accurate.
     var now by remember { mutableStateOf(System.currentTimeMillis()) }

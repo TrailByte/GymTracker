@@ -37,6 +37,13 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
             else workoutDao.getLogsForSession(id)
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val sessionName: StateFlow<String> = _currentSessionId
+        .flatMapLatest { id ->
+            if (id == null) kotlinx.coroutines.flow.flowOf("Workout")
+            else kotlinx.coroutines.flow.flowOf(workoutDao.getSession(id)?.name ?: "Workout")
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "Workout")
 
     private val _restTimerSeconds = MutableStateFlow<Int?>(null)
     val restTimerSeconds = _restTimerSeconds.asStateFlow()
