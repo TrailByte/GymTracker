@@ -90,34 +90,69 @@ fun TemplateDetailScreen(
                             Modifier.fillMaxWidth(),
                             elevation = CardDefaults.cardElevation(defaultElevation = elevation)
                         ) {
-                            Row(
-                                Modifier.padding(12.dp).fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    IconButton(
-                                        onClick = {},
-                                        modifier = Modifier.draggableHandle()
-                                    ) {
-                                        Icon(Icons.Default.Menu, contentDescription = "Drag to reorder")
+                            Column(Modifier.padding(12.dp)) {
+                                Row(
+                                    Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        IconButton(
+                                            onClick = {},
+                                            modifier = Modifier.draggableHandle()
+                                        ) {
+                                            Icon(Icons.Default.Menu, contentDescription = "Drag to reorder")
+                                        }
+                                        Spacer(Modifier.width(4.dp))
+                                        Column {
+                                            Text(exercise?.name ?: "Unknown",
+                                                fontWeight = FontWeight.SemiBold)
+                                            Text(exercise?.muscleGroup ?: "",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
                                     }
-                                    Spacer(Modifier.width(4.dp))
-                                    Column {
-                                        Text(exercise?.name ?: "Unknown",
-                                            fontWeight = FontWeight.SemiBold)
-                                        Text(exercise?.muscleGroup ?: "",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    IconButton(onClick = { viewModel.removeExerciseFromTemplate(te) }) {
+                                        Icon(Icons.Default.Close, contentDescription = "Remove")
                                     }
                                 }
-                                IconButton(onClick = { viewModel.removeExerciseFromTemplate(te) }) {
-                                    Icon(Icons.Default.Close, contentDescription = "Remove")
+                                Spacer(Modifier.height(8.dp))
+                                Row(
+                                    Modifier.fillMaxWidth().padding(start = 8.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(24.dp)
+                                ) {
+                                    TargetStepper(
+                                        label = "Sets",
+                                        value = te.targetSets,
+                                        onChange = { viewModel.updateTargets(te, it, te.targetReps) }
+                                    )
+                                    TargetStepper(
+                                        label = "Reps",
+                                        value = te.targetReps,
+                                        onChange = { viewModel.updateTargets(te, te.targetSets, it) }
+                                    )
                                 }
                             }
                         }
                     }
                 }
+            }
+        }
+    }
+}
+@Composable
+private fun TargetStepper(label: String, value: Int, onChange: (Int) -> Unit) {
+    Column {
+        Text(label, style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedIconButton(onClick = { onChange(value - 1) }) {
+                Text("-", style = MaterialTheme.typography.titleMedium)
+            }
+            Text("$value", Modifier.padding(horizontal = 12.dp),
+                style = MaterialTheme.typography.titleMedium)
+            OutlinedIconButton(onClick = { onChange(value + 1) }) {
+                Text("+", style = MaterialTheme.typography.titleMedium)
             }
         }
     }

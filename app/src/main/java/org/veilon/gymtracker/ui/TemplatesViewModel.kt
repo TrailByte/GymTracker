@@ -79,4 +79,15 @@ class TemplatesViewModel(app: Application) : AndroidViewModel(app) {
             templateDao.updateTemplateExercises(withNewOrder)
         }
     }
+
+    fun updateTargets(templateExercise: TemplateExercise, sets: Int, reps: Int) {
+        viewModelScope.launch {
+            templateDao.updateTemplateExercise(
+                templateExercise.copy(
+                    targetSets = sets.coerceAtLeast(1),
+                    targetReps = reps.coerceAtLeast(1)
+                )
+            )
+        }
+    }
 }
