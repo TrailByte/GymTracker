@@ -28,6 +28,8 @@ A running checklist of what's done and what's outstanding. Edit freely.
   GymTrackerTheme. Every screen recolors via Material color roles.
 - [x] **Theme: signature** — uppercase tracked screen titles (ScreenTitle component),
   monospace on timers/data, PlateBadge component built (Components.kt / PlateBadge.kt).
+- [x] **Push E4** — View past workouts read-only (SessionDetailScreen) + Repeat
+   (create fresh active session copying a past one's exercises).
 
 ## Outstanding
 - [ ] **Home stats** — "Ready to train?" header, This Week / Week Streak / Total cards,
@@ -38,8 +40,7 @@ A running checklist of what's done and what's outstanding. Edit freely.
   Stats tab is still a placeholder.
   TRAP: filtering logs by exercise id must use the stable flatMapLatest +
   setCurrentX() pattern, NOT a parameterized .stateIn() function (flicker bug).
-- [ ] **Push E4** — View past workouts read-only (SessionDetailScreen) + Repeat
-  (create fresh active session copying a past one's exercises).
+
   NOTE: Home history rows (onOpenSession) currently no-op — wire them here.
 - [ ] **Exercise Library** — add / edit / archive custom exercises.
   Decisions made: soft-delete (archive, keep history) when logs exist; own tab.
