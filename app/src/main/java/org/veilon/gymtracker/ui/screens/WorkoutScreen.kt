@@ -57,6 +57,8 @@ fun WorkoutScreen(
             exercises = exercises,
             onDismiss = { showExercisePicker = false },
             onPick = { exercise ->
+                // If already in the workout, this adds another set to the existing card;
+                // addSet numbers it correctly. Either way: one card per exercise.
                 viewModel.addSet(sessionId, exercise)
                 showExercisePicker = false
             }

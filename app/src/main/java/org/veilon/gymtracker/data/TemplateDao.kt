@@ -31,4 +31,7 @@ interface TemplateDao {
 
     @Delete
     suspend fun deleteTemplateExercise(exercise: TemplateExercise)
+
+    @Query("SELECT * FROM template_exercises WHERE templateId = :templateId ORDER BY orderIndex ASC")
+    suspend fun getExercisesForTemplateOnce(templateId: Long): List<TemplateExercise>
 }

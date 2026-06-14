@@ -55,6 +55,9 @@ class TemplatesViewModel(app: Application) : AndroidViewModel(app) {
 
     fun addExerciseToTemplate(templateId: Long, exerciseId: Long, currentCount: Int) {
         viewModelScope.launch {
+            // Don't add an exercise that's already in this template
+            val existing = currentTemplateExercises.value
+            if (existing.any { it.exerciseId == exerciseId }) return@launch
             templateDao.insertTemplateExercise(
                 TemplateExercise(
                     templateId = templateId,

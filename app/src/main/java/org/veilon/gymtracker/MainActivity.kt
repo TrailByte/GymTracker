@@ -82,8 +82,16 @@ fun GymTrackerApp(activeVm: ActiveWorkoutViewModel = viewModel()) {
         ) {
             composable(Screen.Home.route) {
                 HomeScreen(
-                    onStartWorkout = { name ->
+                    onStartEmpty = { name ->
                         activeVm.startEmpty(name) {
+                            navController.navigate(Screen.Log.route) {
+                                popUpTo(Screen.Home.route) { saveState = true }
+                                launchSingleTop = true
+                            }
+                        }
+                    },
+                    onStartFromTemplate = { templateId, name ->
+                        activeVm.startFromTemplate(templateId, name) {
                             navController.navigate(Screen.Log.route) {
                                 popUpTo(Screen.Home.route) { saveState = true }
                                 launchSingleTop = true

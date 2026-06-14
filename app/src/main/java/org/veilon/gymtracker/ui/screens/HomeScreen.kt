@@ -18,17 +18,42 @@ import java.util.*
 
 @Composable
 fun HomeScreen(
-    onStartWorkout: (String) -> Unit,
+    onStartEmpty: (String) -> Unit,
+    onStartFromTemplate: (templateId: Long, name: String) -> Unit,
     onOpenSession: (Long) -> Unit,
     viewModel: HomeViewModel = viewModel()
 ) {
     val sessions by viewModel.recentSessions.collectAsState()
-    var showDialog by remember { mutableStateOf(false) }
+    val templates by viewModel.templates.collectAsState()
+
+    var showChoice by remember { mutableStateOf(false) }
+    var showNameDialog by remember { mutableStateOf(false) }
+    var showTemplatePicker by remember { mutableStateOf(false) }
     var sessionName by remember { mutableStateOf("") }
 
-    if (showDialog) {
+    // Step 1: choose Empty or From Template
+    if (showChoice) {
         AlertDialog(
-            onDismissRequest = { showDialog = false },
+            onDismissRequest = { showChoice = false },
+            title = { Text("Start Workout") },
+            text = { Text("How do you want to start?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showChoice = false; showNameDialog = true
+                }) { Text("Empty") }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showChoice = false; showTemplatePicker = true
+                }) { Text("From Template") }
+            }
+        )
+    }
+
+    // Step 2a: name an empty workout
+    if (showNameDialog) {
+        AlertDialog(
+            onDismissRequest = { showNameDialog = false },
             title = { Text("New Workout") },
             text = {
                 OutlinedTextField(
@@ -41,14 +66,42 @@ fun HomeScreen(
             confirmButton = {
                 TextButton(onClick = {
                     if (sessionName.isNotBlank()) {
-                        onStartWorkout(sessionName.trim())
-                        showDialog = false
+                        onStartEmpty(sessionName.trim())
+                        showNameDialog = false
                         sessionName = ""
                     }
                 }) { Text("Start") }
             },
             dismissButton = {
-                TextButton(onClick = { showDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showNameDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    // Step 2b: pick a template
+    if (showTemplatePicker) {
+        AlertDialog(
+            onDismissRequest = { showTemplatePicker = false },
+            title = { Text("Pick Template") },
+            text = {
+                if (templates.isEmpty()) {
+                    Text("No templates yet. Create one in the Plans tab.")
+                } else {
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        items(templates) { template ->
+                            TextButton(
+                                onClick = {
+                                    onStartFromTemplate(template.id, template.name)
+                                    showTemplatePicker = false
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) { Text(template.name, modifier = Modifier.fillMaxWidth()) }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showTemplatePicker = false }) { Text("Cancel") }
             }
         )
     }
@@ -56,7 +109,7 @@ fun HomeScreen(
     Scaffold(
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                onClick = { showDialog = true },
+                onClick = { showChoice = true },
                 icon = { Icon(Icons.Default.Add, contentDescription = null) },
                 text = { Text("Start Workout") }
             )
@@ -68,11 +121,8 @@ fun HomeScreen(
             contentPadding = PaddingValues(vertical = 16.dp)
         ) {
             item {
-                Text(
-                    "Recent Workouts",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
-                )
+                Text("Recent Workouts", style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(8.dp))
             }
             if (sessions.isEmpty()) {

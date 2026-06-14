@@ -11,12 +11,15 @@ import org.veilon.gymtracker.data.AppDatabase
 class HomeViewModel(app: Application) : AndroidViewModel(app) {
 
     private val workoutDao = AppDatabase.getInstance(app).workoutDao()
+    private val templateDao = AppDatabase.getInstance(app).templateDao()
 
-    // Recent finished workouts = all sessions except the currently-active one
     val recentSessions = combine(
         workoutDao.getAllSessions(),
         UserPreferences.activeSession(app)
     ) { sessions, activeId ->
         sessions.filter { it.id != activeId }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val templates = templateDao.getAllTemplates()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 }
