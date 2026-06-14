@@ -8,9 +8,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -31,7 +31,7 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
     object Log : Screen("log", "Log", Icons.AutoMirrored.Filled.List)
     object Templates : Screen("templates", "Plans", Icons.Default.Star)
     object Progress : Screen("progress", "Stats", Icons.AutoMirrored.Filled.TrendingUp)
-    object Settings : Screen("settings", "Setup", Icons.Default.Settings)
+    object Profile : Screen("profile", "Profile", Icons.Default.Person)
 }
 
 class MainActivity : ComponentActivity() {
@@ -51,7 +51,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun GymTrackerApp(activeVm: ActiveWorkoutViewModel = viewModel()) {
     val navController = rememberNavController()
-    val tabs = listOf(Screen.Home, Screen.Log, Screen.Templates, Screen.Progress, Screen.Settings)
+    val tabs = listOf(Screen.Home, Screen.Log, Screen.Templates, Screen.Progress, Screen.Profile)
     val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
 
     val activeSessionId by activeVm.activeSessionId.collectAsState()
@@ -134,7 +134,22 @@ fun GymTrackerApp(activeVm: ActiveWorkoutViewModel = viewModel()) {
                 )
             }
             composable(Screen.Progress.route) { ProgressScreen() }
-            composable(Screen.Settings.route) { SettingsScreen() }
+            composable(Screen.Profile.route) {
+                ProfileScreen(
+                    onOpenSettings = { navController.navigate("settings") },
+                    onOpenLibrary = { navController.navigate("library") }
+                )
+            }
+            composable("settings") {
+                SettingsScreen()
+            }
+            composable("library") {
+                // Placeholder until Library Push 2
+                androidx.compose.foundation.layout.Box(
+                    Modifier.fillMaxSize(),
+                    contentAlignment = androidx.compose.ui.Alignment.Center
+                ) { Text("Exercise Library — coming in next push") }
+            }
 
             composable("session/{sessionId}") { backStack ->
                 val sessionId = backStack.arguments?.getString("sessionId")?.toLong() ?: return@composable
