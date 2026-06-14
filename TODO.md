@@ -30,12 +30,13 @@ A running checklist of what's done and what's outstanding. Edit freely.
   monospace on timers/data, PlateBadge component built (Components.kt / PlateBadge.kt).
 - [x] **Push E4** — View past workouts read-only (SessionDetailScreen) + Repeat
    (create fresh active session copying a past one's exercises).
-
-## Outstanding
-- [ ] **Home stats** — "Ready to train?" header, This Week / Week Streak / Total cards,
+- [x] **Home stats** — "Ready to train?" header, This Week / Week Streak / Total cards,
   Recent PRs with plate badges (PlateBadge component is ready, not yet used anywhere).
   This is the landing screen + where the signature finally appears in context.
   (Week streak needs a weekly-goal setting wired; can stub it first.)
+
+## Outstanding
+
 - [ ] **Progress / Stats charts** — per-exercise weight-over-time line chart.
   Stats tab is still a placeholder.
   TRAP: filtering logs by exercise id must use the stable flatMapLatest +

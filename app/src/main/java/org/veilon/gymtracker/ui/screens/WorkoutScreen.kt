@@ -360,7 +360,7 @@ fun ExercisePickerDialog(
                     it.muscleGroup.contains(query, ignoreCase = true)
         }
     }
-    val grouped = filtered.groupBy { it.muscleGroup }
+    val grouped = filtered.toList().groupBy { it.muscleGroup }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -372,21 +372,39 @@ fun ExercisePickerDialog(
                     onValueChange = { query = it },
                     label = { Text("Search") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    textStyle = androidx.compose.ui.text.TextStyle(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+                    modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(Modifier.height(8.dp))
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Spacer(Modifier.height(12.dp))
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     grouped.forEach { (group, exList) ->
                         item {
-                            Text(group, style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(top = 8.dp))
+                            // Distinct section band: filled, uppercase, full-width
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                shape = MaterialTheme.shapes.small
+                            ) {
+                                Text(
+                                    group.uppercase(),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.fillMaxWidth()
+                                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                                )
+                            }
                         }
                         items(exList) { ex ->
-                            TextButton(onClick = { onPick(ex) },
-                                modifier = Modifier.fillMaxWidth()) {
-                                Text(ex.name, modifier = Modifier.fillMaxWidth())
+                            Surface(
+                                onClick = { onPick(ex) },
+                                modifier = Modifier.fillMaxWidth(),
+                                color = MaterialTheme.colorScheme.surface
+                            ) {
+                                Text(
+                                    ex.name,
+                                    modifier = Modifier.fillMaxWidth()
+                                        .padding(horizontal = 12.dp, vertical = 12.dp)
+                                )
                             }
                         }
                     }

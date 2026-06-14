@@ -21,6 +21,10 @@ import org.veilon.gymtracker.ui.theme.ScreenTitle
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.math.roundToInt
+import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
+import androidx.compose.ui.graphics.vector.ImageVector
 
 @Composable
 fun HomeScreen(
@@ -117,13 +121,16 @@ fun HomeScreen(
         // Stat cards
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                StatCard(Modifier.weight(1f), stats.workoutsThisWeek.toString(), "This Week")
-                StatCard(Modifier.weight(1f), stats.weekStreak.toString(), "Week Streak")
+                StatCard(Modifier.weight(1f), Icons.Default.FitnessCenter,
+                    stats.workoutsThisWeek.toString(), "This Week")
+                StatCard(Modifier.weight(1f), Icons.Default.LocalFireDepartment,
+                    stats.weekStreak.toString(), "Week Streak")
                 val totalDisplay = if (useLbs)
                     "${(stats.totalVolumeKg * 2.20462 / 1000).roundToInt()}K"
                 else
                     "${(stats.totalVolumeKg / 1000).roundToInt()}K"
-                StatCard(Modifier.weight(1f), totalDisplay, if (useLbs) "Total Klbs" else "Total Tons")
+                StatCard(Modifier.weight(1f), Icons.AutoMirrored.Filled.TrendingUp,
+                    totalDisplay, if (useLbs) "Total Klbs" else "Total Tons")
             }
         }
 
@@ -179,9 +186,11 @@ fun HomeScreen(
 }
 
 @Composable
-private fun StatCard(modifier: Modifier, value: String, label: String) {
+private fun StatCard(modifier: Modifier, icon: ImageVector, value: String, label: String) {
     Card(modifier) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(value, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.titleLarge)
             Text(label.uppercase(), style = MaterialTheme.typography.labelMedium,
