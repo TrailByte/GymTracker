@@ -16,7 +16,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import org.veilon.gymtracker.ui.TemplatesViewModel
 
 @Composable
-fun TemplatesScreen(viewModel: TemplatesViewModel = viewModel()) {
+fun TemplatesScreen(
+    onOpenTemplate: (Long) -> Unit,
+    viewModel: TemplatesViewModel = viewModel()
+) {
     val templates by viewModel.templates.collectAsState()
     var showDialog by remember { mutableStateOf(false) }
     var templateName by remember { mutableStateOf("") }
@@ -75,7 +78,10 @@ fun TemplatesScreen(viewModel: TemplatesViewModel = viewModel()) {
                 }
             } else {
                 items(templates) { template ->
-                    Card(Modifier.fillMaxWidth()) {
+                    Card(
+                        onClick = { onOpenTemplate(template.id) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
                         Row(
                             Modifier.padding(16.dp).fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,

@@ -8,6 +8,9 @@ interface TemplateDao {
     @Query("SELECT * FROM workout_templates ORDER BY name ASC")
     fun getAllTemplates(): Flow<List<WorkoutTemplate>>
 
+    @Query("SELECT * FROM workout_templates WHERE id = :id")
+    fun getTemplate(id: Long): Flow<WorkoutTemplate?>
+
     @Insert
     suspend fun insertTemplate(template: WorkoutTemplate): Long
 
@@ -19,6 +22,12 @@ interface TemplateDao {
 
     @Insert
     suspend fun insertTemplateExercise(exercise: TemplateExercise): Long
+
+    @Update
+    suspend fun updateTemplateExercise(exercise: TemplateExercise)
+
+    @Update
+    suspend fun updateTemplateExercises(exercises: List<TemplateExercise>)
 
     @Delete
     suspend fun deleteTemplateExercise(exercise: TemplateExercise)

@@ -89,7 +89,18 @@ fun GymTrackerApp() {
                     onFinish = { navController.popBackStack() }
                 )
             }
-            composable(Screen.Templates.route) { TemplatesScreen() }
+            composable(Screen.Templates.route) {
+                TemplatesScreen(onOpenTemplate = { templateId ->
+                    navController.navigate("template/$templateId")
+                })
+            }
+            composable("template/{templateId}") { backStack ->
+                val templateId = backStack.arguments?.getString("templateId")?.toLong() ?: return@composable
+                TemplateDetailScreen(
+                    templateId = templateId,
+                    onBack = { navController.popBackStack() }
+                )
+            }
             composable(Screen.Progress.route) { ProgressScreen() }
             composable(Screen.Settings.route) { SettingsScreen() }
         }
