@@ -20,11 +20,24 @@ A running checklist of what's done and what's outstanding. Edit freely.
 - [x] **Push E3** — Start from template: Empty vs From Template choice on Home;
   template's exercises + target sets/reps pre-fill the new workout
 - [x] **Rest timer placement** — renders under the exercise whose set was completed
-- [x] **Bug fixes** — template reps now pass into workout; duplicate-exercise guard
+- [x] **Bug fixes** — template reps pass into workout; duplicate-exercise guard
   in templates; duration timer computed from session start time (no longer stops
-  when leaving the Log screen, survives app restart)
+  when leaving Log screen, survives app restart)
+- [x] **Theme: foundation** — Iron & Chalk palette (Color.kt), light + dark schemes
+  following system setting (Theme.kt), type scale (Type.kt). MainActivity uses
+  GymTrackerTheme. Every screen recolors via Material color roles.
+- [x] **Theme: signature** — uppercase tracked screen titles (ScreenTitle component),
+  monospace on timers/data, PlateBadge component built (Components.kt / PlateBadge.kt).
 
 ## Outstanding
+- [ ] **Home stats** — "Ready to train?" header, This Week / Week Streak / Total cards,
+  Recent PRs with plate badges (PlateBadge component is ready, not yet used anywhere).
+  This is the landing screen + where the signature finally appears in context.
+  (Week streak needs a weekly-goal setting wired; can stub it first.)
+- [ ] **Progress / Stats charts** — per-exercise weight-over-time line chart.
+  Stats tab is still a placeholder.
+  TRAP: filtering logs by exercise id must use the stable flatMapLatest +
+  setCurrentX() pattern, NOT a parameterized .stateIn() function (flicker bug).
 - [ ] **Push E4** — View past workouts read-only (SessionDetailScreen) + Repeat
   (create fresh active session copying a past one's exercises).
   NOTE: Home history rows (onOpenSession) currently no-op — wire them here.
@@ -32,18 +45,14 @@ A running checklist of what's done and what's outstanding. Edit freely.
   Decisions made: soft-delete (archive, keep history) when logs exist; own tab.
   NOTE: revisit tab count — would make 6 tabs; maybe fold into Setup.
   Needs schema change (`archived` flag on Exercise) → one uninstall.
-- [ ] **Iron & Chalk theme** — real colors + typography from the mockup
-  (charcoal bg, chalk text, iron-red accent, plate-badge PRs, uppercase headings).
-  Also enables the light/dark toggle in Settings (deferred until theme exists).
-  Also: Start-Workout choice would be better as a bottom sheet than an AlertDialog.
-- [ ] **Home stats** — "Ready to train?" header, This Week / Week Streak / Total,
-  Recent PRs with plate badges. (Week streak needs the weekly-goal setting wired.)
-- [ ] **Progress / Stats charts** — per-exercise weight-over-time line chart.
-  TRAP: filtering logs by exercise id must use the stable flatMapLatest +
-  setCurrentX() pattern, NOT a parameterized .stateIn() function (flicker bug).
 - [ ] **UI friction fixes** — TO BE ENUMERATED. Known so far:
     - "Stuttery sometimes" — undiagnosed. Need to pin down WHEN (typing? scrolling?
       rest timer running?) before fixing.
+    - Start-Workout choice (Empty/From Template) is a cramped AlertDialog;
+      would be better as a bottom sheet.
+- [ ] **Light/dark toggle in Settings** — currently follows system only. The manual
+  toggle was deferred until the theme existed; theme now exists, so this can be wired
+  (needs a theme-mode preference + plumbing GymTrackerTheme's darkTheme param).
 
 ## Known traps / notes
 - Flow recreation flicker: any "flow filtered by an id" must use a MutableStateFlow
@@ -56,3 +65,5 @@ A running checklist of what's done and what's outstanding. Edit freely.
 - Weight: always stored in kg. Display/input converts via formatWeight/displayWeight/toKg.
 - AGP 9 bundles Kotlin; do NOT add the separate kotlin-android plugin.
 - Elapsed workout time is computed from WorkoutSession.date (start), not counted.
+- Theme color roles cascade automatically; new screens that use MaterialTheme.colorScheme
+  roles get Iron & Chalk for free. Use ScreenTitle for headers, PlateBadge for weights/PRs.
