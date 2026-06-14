@@ -18,7 +18,8 @@ import java.util.*
 
 @Composable
 fun HomeScreen(
-    onStartWorkout: (Long) -> Unit,
+    onStartWorkout: (String) -> Unit,
+    onOpenSession: (Long) -> Unit,
     viewModel: HomeViewModel = viewModel()
 ) {
     val sessions by viewModel.recentSessions.collectAsState()
@@ -40,7 +41,7 @@ fun HomeScreen(
             confirmButton = {
                 TextButton(onClick = {
                     if (sessionName.isNotBlank()) {
-                        viewModel.startSession(sessionName.trim())
+                        onStartWorkout(sessionName.trim())
                         showDialog = false
                         sessionName = ""
                     }
@@ -88,7 +89,7 @@ fun HomeScreen(
                     }
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        onClick = { onStartWorkout(session.id) }
+                        onClick = { onOpenSession(session.id) }
                     ) {
                         Column(Modifier.padding(16.dp)) {
                             Text(session.name, fontWeight = FontWeight.SemiBold)

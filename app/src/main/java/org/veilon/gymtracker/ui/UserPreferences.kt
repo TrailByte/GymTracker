@@ -3,6 +3,7 @@ package org.veilon.gymtracker.ui
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.datastore.preferences.core.Preferences
@@ -14,6 +15,7 @@ val Context.dataStore by preferencesDataStore(name = "user_prefs")
 object UserPreferences {
     private val USE_LBS: Preferences.Key<Boolean> = booleanPreferencesKey("use_lbs")
     private val REST_SECONDS: Preferences.Key<Int> = intPreferencesKey("rest_seconds")
+    private val ACTIVE_SESSION: Preferences.Key<Long> = longPreferencesKey("active_session")
 
     fun useLbs(context: Context): Flow<Boolean> =
         context.dataStore.data.map { it[USE_LBS] ?: false }
@@ -27,5 +29,18 @@ object UserPreferences {
 
     suspend fun setRestSeconds(context: Context, seconds: Int) {
         context.dataStore.edit { it[REST_SECONDS] = seconds }
+    }
+
+    // Active workout session id; null when no workout is in progress
+    fun activeSession(context: Context): Flow<Long?> =
+        context.dataStore.data.map { prefs ->
+            prefs[ACTIVE_SESSION]?.let { if (it <= 0L) null else it }
+        }
+
+    suspend fun setActiveSession(context: Context, sessionId: Long?) {
+        context.dataStore.edit { prefs ->
+            if (sessionId == null) prefs.remove(ACTIVE_SESSION)
+            else prefs[ACTIVE_SESSION] = sessionId
+        }
     }
 }
