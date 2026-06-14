@@ -144,11 +144,7 @@ fun GymTrackerApp(activeVm: ActiveWorkoutViewModel = viewModel()) {
                 SettingsScreen()
             }
             composable("library") {
-                // Placeholder until Library Push 2
-                androidx.compose.foundation.layout.Box(
-                    Modifier.fillMaxSize(),
-                    contentAlignment = androidx.compose.ui.Alignment.Center
-                ) { Text("Exercise Library — coming in next push") }
+                ExerciseLibraryScreen(onBack = { navController.popBackStack() })
             }
 
             composable("session/{sessionId}") { backStack ->

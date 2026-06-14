@@ -1,0 +1,165 @@
+package org.veilon.gymtracker.ui.screens
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import org.veilon.gymtracker.data.Exercise
+import org.veilon.gymtracker.ui.ExerciseLibraryViewModel
+import org.veilon.gymtracker.ui.theme.ScreenTitle
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ExerciseLibraryScreen(
+    onBack: () -> Unit,
+    viewModel: ExerciseLibraryViewModel = viewModel()
+) {
+    val exercises by viewModel.exercises.collectAsState()
+    var editing by remember { mutableStateOf<Exercise?>(null) }
+    var showAddEdit by remember { mutableStateOf(false) }
+
+    if (showAddEdit) {
+        ExerciseEditDialog(
+            existing = editing,
+            muscleGroups = viewModel.muscleGroups,
+            onDismiss = { showAddEdit = false; editing = null },
+            onConfirm = { name, group ->
+                val current = editing
+                if (current == null) viewModel.addExercise(name, group)
+                else viewModel.updateExercise(current, name, group)
+                showAddEdit = false; editing = null
+            }
+        )
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Exercise Library") },
+                navigationIcon = { TextButton(onClick = onBack) { Text("Back") } }
+            )
+        },
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                onClick = { editing = null; showAddEdit = true },
+                icon = { Icon(Icons.Default.Add, null) },
+                text = { Text("New Exercise") }
+            )
+        }
+    ) { padding ->
+        val active = exercises.filter { !it.archived }
+        val archived = exercises.filter { it.archived }
+        val grouped = active.groupBy { it.muscleGroup }
+
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+            contentPadding = PaddingValues(vertical = 16.dp)
+        ) {
+            grouped.forEach { (group, list) ->
+                item {
+                    Surface(
+                        Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        shape = MaterialTheme.shapes.small
+                    ) {
+                        Text(group.uppercase(),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp))
+                    }
+                }
+                items(list, key = { it.id }) { ex ->
+                    Card(Modifier.fillMaxWidth()) {
+                        Row(Modifier.padding(12.dp).fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically) {
+                            Text(ex.name, Modifier.weight(1f))
+                            IconButton(onClick = { editing = ex; showAddEdit = true }) {
+                                Icon(Icons.Default.Edit, "Edit")
+                            }
+                            TextButton(onClick = {
+                                viewModel.removeExercise(ex) { /* archived or deleted */ }
+                            }) { Text("Remove") }
+                        }
+                    }
+                }
+            }
+
+            if (archived.isNotEmpty()) {
+                item {
+                    Spacer(Modifier.height(8.dp))
+                    Text("ARCHIVED", style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Hidden from pickers, history preserved",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                items(archived, key = { it.id }) { ex ->
+                    Card(Modifier.fillMaxWidth()) {
+                        Row(Modifier.padding(12.dp).fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text(ex.name, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(ex.muscleGroup, style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            TextButton(onClick = { viewModel.restoreExercise(ex) }) { Text("Restore") }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ExerciseEditDialog(
+    existing: Exercise?,
+    muscleGroups: List<String>,
+    onDismiss: () -> Unit,
+    onConfirm: (name: String, group: String) -> Unit
+) {
+    var name by remember { mutableStateOf(existing?.name ?: "") }
+    var group by remember { mutableStateOf(existing?.muscleGroup ?: muscleGroups.first()) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (existing == null) "New Exercise" else "Edit Exercise") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Name") },
+                    singleLine = true
+                )
+                Text("Muscle group", style = MaterialTheme.typography.labelMedium)
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    // Two rows of selectable chips
+                    muscleGroups.chunked(3).forEach { row ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            row.forEach { mg ->
+                                FilterChip(
+                                    selected = group == mg,
+                                    onClick = { group = mg },
+                                    label = { Text(mg) }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
