@@ -15,6 +15,7 @@ import org.veilon.gymtracker.ui.theme.ScreenTitle
 fun SettingsScreen(viewModel: SettingsViewModel = viewModel()) {
     val useLbs by viewModel.useLbs.collectAsState()
     val restSeconds by viewModel.restSeconds.collectAsState()
+    val weeklyGoal by viewModel.weeklyGoal.collectAsState()
 
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
@@ -22,7 +23,6 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel()) {
     ) {
         ScreenTitle("Settings")
 
-        // Weight unit
         Card(Modifier.fillMaxWidth()) {
             Row(
                 Modifier.padding(16.dp).fillMaxWidth(),
@@ -35,7 +35,6 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel()) {
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                // false = kg (left), true = lbs (right)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("kg")
                     Switch(checked = useLbs, onCheckedChange = { viewModel.setUseLbs(it) })
@@ -44,7 +43,6 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel()) {
             }
         }
 
-        // Default rest duration
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp)) {
                 Text("Default rest timer", fontWeight = FontWeight.SemiBold)
@@ -66,6 +64,29 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel()) {
                     )
                     OutlinedButton(onClick = { viewModel.setRestSeconds(restSeconds + 15) }) {
                         Text("+15s")
+                    }
+                }
+            }
+        }
+
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp)) {
+                Text("Weekly goal", fontWeight = FontWeight.SemiBold)
+                Text("Workouts per week to keep your streak",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedButton(onClick = { viewModel.setWeeklyGoal(weeklyGoal - 1) }) {
+                        Text("-")
+                    }
+                    Text("$weeklyGoal", style = MaterialTheme.typography.titleLarge)
+                    OutlinedButton(onClick = { viewModel.setWeeklyGoal(weeklyGoal + 1) }) {
+                        Text("+")
                     }
                 }
             }

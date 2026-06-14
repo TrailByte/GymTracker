@@ -44,4 +44,10 @@ interface WorkoutDao {
 
     @Query("SELECT * FROM exercise_logs WHERE sessionId = :sessionId ORDER BY setNumber ASC")
     suspend fun getLogsForSessionOnce(sessionId: Long): List<ExerciseLog>
+
+    @Query("SELECT * FROM exercise_logs WHERE completed = 1")
+    fun getAllCompletedLogs(): Flow<List<ExerciseLog>>
+
+    @Query("SELECT * FROM exercise_logs WHERE completed = 1")
+    suspend fun getAllCompletedLogsOnce(): List<ExerciseLog>
 }

@@ -26,4 +26,11 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
             UserPreferences.setRestSeconds(appContext, value.coerceAtLeast(0))
         }
     }
+
+    val weeklyGoal = UserPreferences.weeklyGoal(app)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 3)
+
+    fun setWeeklyGoal(value: Int) {
+        viewModelScope.launch { UserPreferences.setWeeklyGoal(appContext, value) }
+    }
 }

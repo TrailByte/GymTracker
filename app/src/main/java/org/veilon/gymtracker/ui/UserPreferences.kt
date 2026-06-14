@@ -16,6 +16,7 @@ object UserPreferences {
     private val USE_LBS: Preferences.Key<Boolean> = booleanPreferencesKey("use_lbs")
     private val REST_SECONDS: Preferences.Key<Int> = intPreferencesKey("rest_seconds")
     private val ACTIVE_SESSION: Preferences.Key<Long> = longPreferencesKey("active_session")
+    private val WEEKLY_GOAL: Preferences.Key<Int> = intPreferencesKey("weekly_goal")
 
     fun useLbs(context: Context): Flow<Boolean> =
         context.dataStore.data.map { it[USE_LBS] ?: false }
@@ -42,5 +43,12 @@ object UserPreferences {
             if (sessionId == null) prefs.remove(ACTIVE_SESSION)
             else prefs[ACTIVE_SESSION] = sessionId
         }
+    }
+
+    fun weeklyGoal(context: Context): Flow<Int> =
+        context.dataStore.data.map { it[WEEKLY_GOAL] ?: 3 }
+
+    suspend fun setWeeklyGoal(context: Context, goal: Int) {
+        context.dataStore.edit { it[WEEKLY_GOAL] = goal.coerceAtLeast(1) }
     }
 }
