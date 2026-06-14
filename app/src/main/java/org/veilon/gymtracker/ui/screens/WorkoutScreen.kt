@@ -35,10 +35,14 @@ fun WorkoutScreen(
     val logs by viewModel.logs.collectAsState()
     val exercises by viewModel.exercises.collectAsState()
     val restTimer by viewModel.restTimerSeconds.collectAsState()
-    val elapsed by viewModel.elapsedSeconds.collectAsState()
     val useLbs by viewModel.useLbs.collectAsState()
     val restDuration by viewModel.restDuration.collectAsState()
     val restForExerciseId by viewModel.restForExerciseId.collectAsState()
+    val startTime by viewModel.startTime.collectAsState()
+    // A ticking "now" that updates every second while this screen is visible.
+    // Elapsed is computed as now - startTime, so leaving/returning stays accurate.
+    var now by remember { mutableStateOf(System.currentTimeMillis()) }
+    val elapsed = startTime?.let { ((now - it) / 1000).toInt().coerceAtLeast(0) } ?: 0
 
     var showExercisePicker by remember { mutableStateOf(false) }
     var showFinishDialog by remember { mutableStateOf(false) }
@@ -46,7 +50,10 @@ fun WorkoutScreen(
     var showRestConfig by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        while (true) { delay(1000); viewModel.tickElapsed() }
+        while (true) {
+            now = System.currentTimeMillis()
+            delay(1000)
+        }
     }
     LaunchedEffect(restTimer) {
         if (restTimer != null) { delay(1000); viewModel.tickRestTimer() }

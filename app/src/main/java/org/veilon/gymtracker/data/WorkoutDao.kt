@@ -38,4 +38,7 @@ interface WorkoutDao {
 
     @Query("DELETE FROM exercise_logs WHERE sessionId = :sessionId AND completed = 0")
     suspend fun deleteIncompleteLogs(sessionId: Long)
+
+    @Query("SELECT * FROM workout_sessions WHERE id = :id")
+    suspend fun getSession(id: Long): WorkoutSession?
 }

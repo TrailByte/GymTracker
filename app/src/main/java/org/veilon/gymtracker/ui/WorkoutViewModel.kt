@@ -47,8 +47,9 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
     private val _restDuration = MutableStateFlow(90)
     val restDuration = _restDuration.asStateFlow()
 
-    private val _elapsedSeconds = MutableStateFlow(0)
-    val elapsedSeconds = _elapsedSeconds.asStateFlow()
+    // Workout start time (epoch millis); elapsed is computed from this, not counted
+    private val _startTime = MutableStateFlow<Long?>(null)
+    val startTime = _startTime.asStateFlow()
 
     init {
         // Seed the per-session duration from the saved global default
@@ -59,6 +60,9 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setSession(sessionId: Long) {
         _currentSessionId.value = sessionId
+        viewModelScope.launch {
+            _startTime.value = workoutDao.getSession(sessionId)?.date
+        }
     }
 
     fun setRestDuration(seconds: Int) {
@@ -145,9 +149,5 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
     fun skipRest() {
         _restTimerSeconds.value = null
         _restForExerciseId.value = null
-    }
-
-    fun tickElapsed() {
-        _elapsedSeconds.value += 1
     }
 }
