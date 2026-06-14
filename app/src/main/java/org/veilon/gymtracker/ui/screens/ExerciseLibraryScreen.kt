@@ -15,7 +15,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.veilon.gymtracker.data.Exercise
 import org.veilon.gymtracker.ui.ExerciseLibraryViewModel
-import org.veilon.gymtracker.ui.theme.ScreenTitle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -68,29 +67,33 @@ fun ExerciseLibraryScreen(
             grouped.forEach { (group, list) ->
                 item {
                     Surface(
-                        Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth(),
                         color = MaterialTheme.colorScheme.surfaceVariant,
                         shape = MaterialTheme.shapes.small
                     ) {
-                        Text(group.uppercase(),
+                        Text(
+                            group.uppercase(),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp))
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)
+                        )
                     }
                 }
                 items(list, key = { it.id }) { ex ->
-                    Card(Modifier.fillMaxWidth()) {
-                        Row(Modifier.padding(12.dp).fillMaxWidth(),
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier.padding(12.dp).fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically) {
-                            Text(ex.name, Modifier.weight(1f))
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(ex.name, modifier = Modifier.weight(1f))
                             IconButton(onClick = { editing = ex; showAddEdit = true }) {
-                                Icon(Icons.Default.Edit, "Edit")
+                                Icon(Icons.Default.Edit, contentDescription = "Edit")
                             }
-                            TextButton(onClick = {
-                                viewModel.removeExercise(ex) { /* archived or deleted */ }
-                            }) { Text("Remove") }
+                            TextButton(onClick = { viewModel.removeExercise(ex) {} }) {
+                                Text("Remove")
+                            }
                         }
                     }
                 }
@@ -99,23 +102,35 @@ fun ExerciseLibraryScreen(
             if (archived.isNotEmpty()) {
                 item {
                     Spacer(Modifier.height(8.dp))
-                    Text("ARCHIVED", style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("Hidden from pickers, history preserved",
+                    Text(
+                        "ARCHIVED",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        "Hidden from pickers, history preserved",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
                 items(archived, key = { it.id }) { ex ->
-                    Card(Modifier.fillMaxWidth()) {
-                        Row(Modifier.padding(12.dp).fillMaxWidth(),
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier.padding(12.dp).fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f)) {
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
                                 Text(ex.name, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Text(ex.muscleGroup, style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(
+                                    ex.muscleGroup,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
-                            TextButton(onClick = { viewModel.restoreExercise(ex) }) { Text("Restore") }
+                            TextButton(onClick = { viewModel.restoreExercise(ex) }) {
+                                Text("Restore")
+                            }
                         }
                     }
                 }
@@ -148,10 +163,9 @@ private fun ExerciseEditDialog(
                 )
                 Text("Muscle group", style = MaterialTheme.typography.labelMedium)
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    // Two rows of selectable chips
-                    muscleGroups.chunked(3).forEach { row ->
+                    muscleGroups.chunked(3).forEach { rowGroups ->
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            row.forEach { mg ->
+                            rowGroups.forEach { mg ->
                                 FilterChip(
                                     selected = group == mg,
                                     onClick = { group = mg },
@@ -163,3 +177,13 @@ private fun ExerciseEditDialog(
                 }
             }
         },
+        confirmButton = {
+            TextButton(onClick = { if (name.isNotBlank()) onConfirm(name.trim(), group) }) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
+}
