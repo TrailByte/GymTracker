@@ -23,6 +23,8 @@ import androidx.navigation.compose.rememberNavController
 import org.veilon.gymtracker.ui.ActiveWorkoutViewModel
 import org.veilon.gymtracker.ui.screens.*
 import org.veilon.gymtracker.ui.theme.GymTrackerTheme
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 
 sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
     object Home : Screen("home", "Home", Icons.Default.Home)
@@ -36,7 +38,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            GymTrackerTheme {
+            val themeMode by org.veilon.gymtracker.ui.UserPreferences
+                .themeMode(applicationContext)
+                .collectAsState(initial = "system")
+            GymTrackerTheme(themeMode = themeMode) {
                 GymTrackerApp()
             }
         }

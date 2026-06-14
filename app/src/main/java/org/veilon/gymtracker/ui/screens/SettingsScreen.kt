@@ -16,12 +16,30 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel()) {
     val useLbs by viewModel.useLbs.collectAsState()
     val restSeconds by viewModel.restSeconds.collectAsState()
     val weeklyGoal by viewModel.weeklyGoal.collectAsState()
+    val themeMode by viewModel.themeMode.collectAsState()
 
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         ScreenTitle("Settings")
+
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp)) {
+                Text("Appearance", fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.height(12.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("system" to "System", "light" to "Light", "dark" to "Dark")
+                        .forEach { (value, label) ->
+                            FilterChip(
+                                selected = themeMode == value,
+                                onClick = { viewModel.setThemeMode(value) },
+                                label = { Text(label) }
+                            )
+                        }
+                }
+            }
+        }
 
         Card(Modifier.fillMaxWidth()) {
             Row(

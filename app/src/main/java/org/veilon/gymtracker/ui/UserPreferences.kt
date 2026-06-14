@@ -51,4 +51,15 @@ object UserPreferences {
     suspend fun setWeeklyGoal(context: Context, goal: Int) {
         context.dataStore.edit { it[WEEKLY_GOAL] = goal.coerceAtLeast(1) }
     }
+
+    // with the other keys
+    private val THEME_MODE: Preferences.Key<String> = androidx.datastore.preferences.core.stringPreferencesKey("theme_mode")
+
+    // with the other accessors — values: "system" | "light" | "dark"
+    fun themeMode(context: Context): Flow<String> =
+        context.dataStore.data.map { it[THEME_MODE] ?: "system" }
+
+    suspend fun setThemeMode(context: Context, mode: String) {
+        context.dataStore.edit { it[THEME_MODE] = mode }
+    }
 }

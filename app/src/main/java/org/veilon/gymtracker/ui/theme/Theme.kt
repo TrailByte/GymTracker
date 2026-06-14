@@ -51,3 +51,20 @@ fun GymTrackerTheme(
         content = content
     )
 }
+
+@Composable
+fun GymTrackerTheme(
+    themeMode: String = "system",
+    content: @Composable () -> Unit
+) {
+    val darkTheme = when (themeMode) {
+        "light" -> false
+        "dark" -> true
+        else -> isSystemInDarkTheme()
+    }
+    MaterialTheme(
+        colorScheme = if (darkTheme) DarkColors else LightColors,
+        typography = GymTypography,
+        content = content
+    )
+}
