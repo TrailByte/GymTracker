@@ -17,13 +17,17 @@ A running checklist of what's done and what's outstanding. Edit freely.
 - [x] **Push E2** — Active-workout concept (persisted active session id);
   Home/Log restructure; 5 tabs (Home, Log, Plans, Stats, Setup);
   starting a workout switches to Log tab; Home history hides active session
-- [x] **Rest timer placement** — now renders under the exercise whose set was completed
+- [x] **Push E3** — Start from template: Empty vs From Template choice on Home;
+  template's exercises + target sets/reps pre-fill the new workout
+- [x] **Rest timer placement** — renders under the exercise whose set was completed
+- [x] **Bug fixes** — template reps now pass into workout; duplicate-exercise guard
+  in templates; duration timer computed from session start time (no longer stops
+  when leaving the Log screen, survives app restart)
 
 ## Outstanding
-- [ ] **Push E3** — Start from template: pre-fill a new workout from a template's
-  exercises + set/rep targets. Also: "Empty vs From Template" start choice on Home.
 - [ ] **Push E4** — View past workouts read-only (SessionDetailScreen) + Repeat
   (create fresh active session copying a past one's exercises).
+  NOTE: Home history rows (onOpenSession) currently no-op — wire them here.
 - [ ] **Exercise Library** — add / edit / archive custom exercises.
   Decisions made: soft-delete (archive, keep history) when logs exist; own tab.
   NOTE: revisit tab count — would make 6 tabs; maybe fold into Setup.
@@ -31,12 +35,15 @@ A running checklist of what's done and what's outstanding. Edit freely.
 - [ ] **Iron & Chalk theme** — real colors + typography from the mockup
   (charcoal bg, chalk text, iron-red accent, plate-badge PRs, uppercase headings).
   Also enables the light/dark toggle in Settings (deferred until theme exists).
+  Also: Start-Workout choice would be better as a bottom sheet than an AlertDialog.
 - [ ] **Home stats** — "Ready to train?" header, This Week / Week Streak / Total,
   Recent PRs with plate badges. (Week streak needs the weekly-goal setting wired.)
 - [ ] **Progress / Stats charts** — per-exercise weight-over-time line chart.
   TRAP: filtering logs by exercise id must use the stable flatMapLatest +
   setCurrentX() pattern, NOT a parameterized .stateIn() function (flicker bug).
-- [ ] **UI friction fixes** — things flagged as annoying in real use. TO BE ENUMERATED.
+- [ ] **UI friction fixes** — TO BE ENUMERATED. Known so far:
+    - "Stuttery sometimes" — undiagnosed. Need to pin down WHEN (typing? scrolling?
+      rest timer running?) before fixing.
 
 ## Known traps / notes
 - Flow recreation flicker: any "flow filtered by an id" must use a MutableStateFlow
@@ -48,3 +55,4 @@ A running checklist of what's done and what's outstanding. Edit freely.
   entity change. Fine while there's no real data to lose.
 - Weight: always stored in kg. Display/input converts via formatWeight/displayWeight/toKg.
 - AGP 9 bundles Kotlin; do NOT add the separate kotlin-android plugin.
+- Elapsed workout time is computed from WorkoutSession.date (start), not counted.
