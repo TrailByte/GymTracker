@@ -3,67 +3,67 @@
 A running checklist of what's done and what's outstanding. Edit freely.
 
 ## Done
-- [x] **Push 0** — Project setup (Compose, Room, KSP, AGP 9 built-in Kotlin)
-- [x] **Data layer** — 5 entities, 3 DAOs, AppDatabase with seeded exercises
-- [x] **ViewModels** — Home, Workout, Templates
-- [x] **Screens + nav** — Home, Log, Templates, Progress, Settings (5 tabs)
-- [x] **Push A** — `completed` flag on sets; edit/toggle/delete/finish plumbing
-- [x] **Push B** — Inline set editing, per-exercise Add Set, completed checkmark,
-  Add Exercise / Finish / Cancel, picker search, per-session rest stepper,
-  lbs/kg (store kg, display converts)
-- [x] **Push C** — Settings screen (kg/lbs, global default rest), Setup tab
-- [x] **Push D** — Template editing: add/remove/drag-reorder exercises
-- [x] **Push E1** — Template exercises carry target sets × reps
-- [x] **Push E2** — Active-workout concept (persisted active session id);
-  Home/Log restructure; starting a workout switches to Log; Home hides active session
-- [x] **Push E3** — Start from template (Empty vs From Template); pre-fills sets/reps
-- [x] **Push E4** — View past workouts read-only (SessionDetailScreen) + Repeat;
-  real session names wired through (Log + detail)
-- [x] **Rest timer placement** — renders under the exercise whose set was completed
-- [x] **Bug fixes** — template reps pass through; duplicate-exercise guard;
-  duration timer computed from session start (survives leaving screen / restart)
-- [x] **Theme: foundation** — Iron & Chalk palette, light + dark schemes, type scale
-- [x] **Theme: signature** — uppercase tracked titles (ScreenTitle), monospace data,
-  PlateBadge component
-- [x] **Home stats** — date + "Ready to train?", stat cards w/ icons (This Week,
-  Week Streak, Total Volume), START WORKOUT, Recent PRs (weight PR + volume PR,
-  plate badges), recent workouts. Weekly-goal setting added to Settings.
-- [x] **Templates polish** — "NEW" pill button at top (was a FAB)
-- [x] **Exercise picker polish** — sectioned muscle-group bands, cleaner rows
-- [x] **Light/Dark toggle** — System / Light / Dark in Settings, persisted
+- [x] Project setup, data layer (entities, DAOs, seeded exercises)
+- [x] Workout logging: inline set editing, per-exercise Add Set, completed
+  checkmark, Add Exercise / Finish / Cancel, picker search (sectioned),
+  rest timer under the right exercise (per-session + global default)
+- [x] Weight units: stored in kg, display/input converts (lbs/kg toggle)
+- [x] Templates: create, drag-reorder, target sets × reps, duplicate guard
+- [x] Active-workout model: persisted active session id; start opens the live
+  workout as a pushed route
+- [x] Start from template (Empty vs From Template), pre-fills sets/reps
+- [x] Theme: Iron & Chalk palette, light/dark + System toggle, uppercase
+  titles, monospace data, PlateBadge
+- [x] Home: stats (This Week, Week Streak, Total Volume) + PRs (weight + volume,
+  plate badges) + START WORKOUT. Weekly-goal setting.
+- [x] Profile hub (5th tab): Settings + Exercise Library sub-screens
+- [x] Exercise Library: add / edit / archive (soft-delete) / restore
+- [x] Log tab = workout history; active workout as a resume card; Home no longer
+  owns history
+- [x] Minimized-workout mini-bar above the tabs (name + live timer), down-arrow
+  to minimize; name + timer also in the workout top bar
+- [x] Timer is timestamp-based — correct after minimize / background / app kill
 
 ## Outstanding
-- [ ] **Exercise Library** — add / edit / archive custom exercises.
-  Decisions made: soft-delete (archive, keep history) when logs exist; own tab.
-  NOTE: revisit tab count — would make 6 tabs; maybe fold into Setup.
-  Needs schema change (`archived` flag on Exercise) → one uninstall.
-  *** This is the last real functional gap — currently locked to 21 seed exercises. ***
+- [ ] **Rest-timer alert (NEEDED)** — when the rest countdown hits zero, the user
+  is usually NOT looking at the screen. Needs at minimum a sound + vibration when
+  rest ends. Right now nothing fires if you've navigated away or backgrounded.
+  - Simplest: play a sound + vibrate when the in-app countdown reaches 0
+    (works while app is foregrounded).
+  - Fuller: a notification that fires even if the app is backgrounded/closed —
+    requires scheduling (WorkManager/AlarmManager or a foreground Service) +
+    POST_NOTIFICATIONS permission (Android 13+). Bigger chunk.
+  - Decision needed: in-app-only sound first, or go straight to notifications?
+- [ ] **Background timer / notification (future)** — a live workout/rest timer in
+  the notification shade while the app is backgrounded, like dedicated timer apps.
+  Needs a foreground Service + notifications. Larger feature; only if wanted.
 - [ ] **Progress / Stats charts** — per-exercise weight-over-time line chart.
   Stats tab is still a placeholder.
-  TRAP: filter logs by exercise id with stable flatMapLatest + setCurrentX(),
-  NOT a parameterized .stateIn() function (flicker bug).
-- [ ] **Levels & Achievements (gamification)** — user profile with XP/levels and
-  unlockable achievements. NEEDS A SCOPING PASS before building — open questions:
-  - What grants XP? (workouts completed, volume lifted, streak weeks, PRs hit?)
-  - Level curve (linear? escalating thresholds?)
-  - Achievement set (first workout, 7-day streak, 100 workouts, bodyweight bench, etc.)
-  - Where does the profile live? (new tab? inside Setup? top of Home?)
-  - Schema: likely a new table for unlocked achievements + XP stored in prefs or DB.
-  - Visual: badges, progress bar to next level — ties into the plate-badge motif.
-- [ ] **UI friction fixes** — known so far:
-  - "Stuttery sometimes" — undiagnosed. Need to pin down WHEN (typing? scrolling?
-    rest timer running?) before fixing.
-  - Start-Workout choice (Empty/From Template) is a cramped AlertDialog;
-    would be better as a bottom sheet.
+  TRAP: filter logs by exercise id with stable flatMapLatest + setCurrentX().
+- [ ] **Levels & Achievements (gamification)** — slots into the Profile hub header.
+  NEEDS A SCOPING PASS — what grants XP, level curve, achievement set, schema,
+  visuals (ties into plate-badge motif).
+- [ ] **UI friction**:
+  - "Stuttery sometimes" — undiagnosed; pin down WHEN before fixing.
+  - Start-Workout choice (Empty/From Template) cramped AlertDialog → bottom sheet.
+  - Settings & Library "Back" text button → proper back arrow icon.
 
 ## Known traps / notes
-- Flow recreation flicker: any "flow filtered by an id" must use a MutableStateFlow
-  id + flatMapLatest in the ViewModel, set via setCurrentX() from a LaunchedEffect.
-  Calling .stateIn() inside a function the composable invokes recreates the flow
-  every recomposition → flicker. Bit us 3× (workout logs, template exercises).
-- Schema changes have no migrations yet → uninstall/reinstall after any entity change.
-- Weight: always stored in kg. Convert via formatWeight/displayWeight/toKg.
+- Flow filtered by an id → MutableStateFlow id + flatMapLatest, set via
+  setCurrentX() from a LaunchedEffect. NOT a parameterized .stateIn() (flicker).
+- Schema changes have no migrations → uninstall/reinstall after any entity change.
+- Weight always stored in kg. Convert via formatWeight/displayWeight/toKg.
 - AGP 9 bundles Kotlin; do NOT add the separate kotlin-android plugin.
-- Elapsed workout time computed from WorkoutSession.date (start), not counted.
-- Theme color roles cascade automatically; use ScreenTitle for headers,
-  PlateBadge for weights/PRs.
+- Elapsed time computed from WorkoutSession.date (start), not counted.
+- Use ScreenTitle for headers, PlateBadge for weights/PRs.
+- Big pasted files can truncate or mis-merge (duplicate/clobbered function
+  headers → cascading "unresolved reference"). For big files, replace the whole
+  file from a download rather than pasting into the middle.
+
+## Branding / polish (added)
+- [ ] **App name → "Forj"** — change app_name in strings.xml (done / in progress).
+- [ ] **Custom app icon** — replace the default Android robot launcher icon.
+  Use Android Studio's Image Asset Studio (right-click res → New → Image Asset)
+  to generate all densities + adaptive icon from a single source image.
+- [ ] **Wordmark inside the app** — show "Forj" somewhere in-app (Profile hub header
+  or a small Home wordmark). Optional polish.

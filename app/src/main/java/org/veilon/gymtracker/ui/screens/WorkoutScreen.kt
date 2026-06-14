@@ -151,7 +151,17 @@ fun WorkoutScreen(
             topBar = {
                 @OptIn(ExperimentalMaterial3Api::class)
                 TopAppBar(
-                    title = { },
+                    title = {
+                        Column {
+                            Text(sessionName.uppercase(),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold)
+                            Text(formatElapsed(elapsed),
+                                style = MaterialTheme.typography.bodySmall,
+                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    },
                     navigationIcon = {
                         IconButton(onClick = onMinimize) {
                             Icon(
@@ -169,17 +179,11 @@ fun WorkoutScreen(
             contentPadding = PaddingValues(vertical = 16.dp)
         ) {
             item {
-                Column {
-                    ScreenTitle(sessionName)
-                    Text(formatElapsed(elapsed), style = MaterialTheme.typography.bodySmall,
-                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    TextButton(
-                        onClick = { showRestConfig = true },
-                        contentPadding = PaddingValues(0.dp)
-                    ) {
-                        Text("Rest: ${restDuration / 60}:${String.format("%02d", restDuration % 60)} (tap to change)")
-                    }
+                TextButton(
+                    onClick = { showRestConfig = true },
+                    contentPadding = PaddingValues(0.dp)
+                ) {
+                    Text("Rest: ${restDuration / 60}:${String.format(java.util.Locale.US, "%02d", restDuration % 60)} (tap to change)")
                 }
                 Spacer(Modifier.height(8.dp))
             }
