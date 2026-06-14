@@ -41,4 +41,7 @@ interface WorkoutDao {
 
     @Query("SELECT * FROM workout_sessions WHERE id = :id")
     suspend fun getSession(id: Long): WorkoutSession?
+
+    @Query("SELECT * FROM exercise_logs WHERE sessionId = :sessionId ORDER BY setNumber ASC")
+    suspend fun getLogsForSessionOnce(sessionId: Long): List<ExerciseLog>
 }

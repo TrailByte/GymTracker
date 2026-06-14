@@ -99,7 +99,9 @@ fun GymTrackerApp(activeVm: ActiveWorkoutViewModel = viewModel()) {
                             }
                         }
                     },
-                    onOpenSession = { /* read-only view comes in E4 */ }
+                    onOpenSession = { sessionId ->
+                        navController.navigate("session/$sessionId")
+                    }
                 )
             }
             composable(Screen.Log.route) {
@@ -128,6 +130,22 @@ fun GymTrackerApp(activeVm: ActiveWorkoutViewModel = viewModel()) {
             }
             composable(Screen.Progress.route) { ProgressScreen() }
             composable(Screen.Settings.route) { SettingsScreen() }
+
+            composable("session/{sessionId}") { backStack ->
+                val sessionId = backStack.arguments?.getString("sessionId")?.toLong() ?: return@composable
+                SessionDetailScreen(
+                    sessionId = sessionId,
+                    onBack = { navController.popBackStack() },
+                    onRepeat = { id ->
+                        activeVm.repeatSession(id) {
+                            navController.navigate(Screen.Log.route) {
+                                popUpTo(Screen.Home.route) { saveState = true }
+                                launchSingleTop = true
+                            }
+                        }
+                    }
+                )
+            }
         }
     }
 }

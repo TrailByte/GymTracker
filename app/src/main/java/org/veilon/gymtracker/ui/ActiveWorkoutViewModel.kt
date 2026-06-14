@@ -52,6 +52,29 @@ class ActiveWorkoutViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun repeatSession(pastSessionId: Long, onStarted: (Long) -> Unit) {
+        viewModelScope.launch {
+            val past = workoutDao.getSession(pastSessionId)
+            val name = past?.name ?: "Workout"
+            val newId = workoutDao.insertSession(WorkoutSession(name = name))
+            val pastLogs = workoutDao.getLogsForSessionOnce(pastSessionId)
+            pastLogs.forEach { log ->
+                workoutDao.insertLog(
+                    ExerciseLog(
+                        sessionId = newId,
+                        exerciseId = log.exerciseId,
+                        setNumber = log.setNumber,
+                        reps = log.reps,
+                        weight = log.weight,
+                        completed = false
+                    )
+                )
+            }
+            UserPreferences.setActiveSession(appContext, newId)
+            onStarted(newId)
+        }
+    }
+
     fun clearActive() {
         viewModelScope.launch {
             UserPreferences.setActiveSession(appContext, null)
