@@ -7,6 +7,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,6 +29,7 @@ import org.veilon.gymtracker.ui.theme.ScreenTitle
 fun WorkoutScreen(
     sessionId: Long,
     onFinish: () -> Unit,
+    onMinimize: () -> Unit,
     viewModel: WorkoutViewModel = viewModel()
 ) {
     LaunchedEffect(sessionId) { viewModel.setSession(sessionId) }
@@ -362,11 +364,10 @@ fun RestTimerCard(seconds: Int, onAddTime: () -> Unit, onSkip: () -> Unit) {
 }
 
 @Composable
-fun WorkoutScreen(
-    sessionId: Long,
-    onFinish: () -> Unit,
-    onMinimize: () -> Unit,
-    viewModel: WorkoutViewModel = viewModel()
+fun ExercisePickerDialog(
+    exercises: List<Exercise>,
+    onDismiss: () -> Unit,
+    onPick: (Exercise) -> Unit
 ) {
     var query by remember { mutableStateOf("") }
     val filtered = remember(query, exercises) {
