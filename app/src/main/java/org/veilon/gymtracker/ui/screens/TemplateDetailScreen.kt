@@ -80,7 +80,7 @@ fun TemplateDetailScreen(
                 state = lazyListState,
                 modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(vertical = 16.dp)
+                contentPadding = PaddingValues(top = 16.dp, bottom = 96.dp)
             ) {
                 items(orderedExercises, key = { it.id }) { te ->
                     ReorderableItem(reorderState, key = te.id) { isDragging ->

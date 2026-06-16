@@ -25,6 +25,9 @@ import org.veilon.gymtracker.ui.displayWeight
 import org.veilon.gymtracker.ui.toKg
 import org.veilon.gymtracker.ui.theme.ScreenTitle
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.imePadding
+
+
 @Composable
 fun WorkoutScreen(
     sessionId: Long,
@@ -191,11 +194,15 @@ fun WorkoutScreen(
                 )
             }
         ) { padding ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            contentPadding = PaddingValues(vertical = 16.dp)
-        ) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .imePadding()
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(top = 16.dp, bottom = 96.dp)
+            ) {
             item {
                 TextButton(
                     onClick = { showRestConfig = true },
