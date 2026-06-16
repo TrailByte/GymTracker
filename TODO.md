@@ -87,7 +87,7 @@ Grouped by size. Order TBD.
 - [ ] #3  Rest timer increments: add +30, and allow typing the value manually.
 - [ ] #6  Remove and edit past workouts (from the Log/SessionDetail screen).
 - [ ] #12 PR pill/badge shown in the Log (workout) screen when a set hits a PR.
-- [ ] #13 Workout history card stats: per-exercise sets, total volume, duration.
+- [x] #13 Workout history card stats: per-exercise sets, total volume, duration.
 - [ ] #9  Scroll lag in the workout screen (THE "stuttery" item — needs profiling;
   likely the inline OutlinedTextFields recomposing, or unstable list keys).
 
@@ -97,3 +97,12 @@ Grouped by size. Order TBD.
 - [ ] #5  Exercise TYPES — some exercises track reps + duration (planks, holds) or
   duration only, not reps + weight. BIG: needs an exercise "type" field, different
   input UI per type, and type-aware display/PRs/volume. Almost its own mini-project.
+
+## Smaller follow-ups (noted)
+- [ ] Delete-set discoverability: long-press to delete works but isn't self-
+  explanatory. Consider a hint (drag handle / one-time tip) or a visible delete
+  affordance.
+- [ ] Set renumbering: deleting a middle set leaves stored setNumbers with gaps
+  (e.g. 1, 3) until next add. Renumber on delete if it bothers.
+- [ ] Log card: in-card scroll for long exercise lists is a nested-scroll combo;
+  revisit vs "+N more" if it feels fiddly in use.
