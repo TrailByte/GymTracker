@@ -33,7 +33,7 @@ fun SessionDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(sessionName) },
+                title = { Text(sessionName.uppercase()) },
                 navigationIcon = { TextButton(onClick = onBack) { Text("Back") } }
             )
         },
@@ -52,7 +52,6 @@ fun SessionDetailScreen(
             contentPadding = PaddingValues(vertical = 16.dp)
         ) {
             item {
-                ScreenTitle(sessionName)
                 Spacer(Modifier.height(8.dp))
             }
             if (logs.isEmpty()) {
@@ -94,4 +93,3 @@ fun SessionDetailScreen(
         }
     }
 }
-
