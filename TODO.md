@@ -84,9 +84,10 @@ Grouped by size. Order TBD.
 - [ ] #1  Reorder exercises within the workout screen (reuse Reorderable lib;
   needs an orderIndex on the in-workout exercises — currently order is just
   insertion order of logs).
-- [ ] #3  Rest timer increments: add +30, and allow typing the value manually.
+- [x] #3  Rest duration picker — replaced steppers with an iPhone-style scroll
+  wheel (minutes 0-10, seconds in 10s steps). DIY snap-scroll, no dependency.
 - [ ] #6  Remove and edit past workouts (from the Log/SessionDetail screen).
-- [ ] #12 PR pill/badge shown in the Log (workout) screen when a set hits a PR.
+- [~] #12 (PARKED — see Scale/perf; do with gamification DB) PR pill/badge shown in the Log (workout) screen when a set hits a PR.
 - [x] #13 Workout history card stats: per-exercise sets, total volume, duration.
 - [ ] #9  Scroll lag in the workout screen (THE "stuttery" item — needs profiling;
   likely the inline OutlinedTextFields recomposing, or unstable list keys).
