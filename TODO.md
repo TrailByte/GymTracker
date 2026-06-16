@@ -71,13 +71,13 @@ A running checklist of what's done and what's outstanding. Edit freely.
 Grouped by size. Order TBD.
 
 ### Quick fixes
-- [ ] #2  "Remove" text breaks layout when exercise name is long (Row weighting).
-- [ ] #14 Viewing a past workout shows "Workout" instead of the real name
+- [x] #2  "Remove" text breaks layout when exercise name is long (Row weighting).
+- [x] #14 Viewing a past workout shows "Workout" instead of the real name
   (SessionDetailScreen still passes a hardcoded title — load real name).
-- [ ] #7  Completed sets: highlight the whole row, not just the check.
-- [ ] #8  Block marking a set complete if reps OR weight is empty/zero.
-- [ ] #11 Confirmation dialog before removing an exercise or a workout plan.
-- [ ] #10 Keyboard / FAB hides the input field at bottom of screen
+- [x] #7  Completed sets: highlight the whole row, not just the check.
+- [x] #8  Block marking a set complete if reps OR weight is empty/zero.
+- [x] #11 Confirmation dialog before removing an exercise or a workout plan.
+- [x] #10 Keyboard / FAB hides the input field at bottom of screen
   (imePadding + ensure focused field scrolls into view).
 
 ### Medium
