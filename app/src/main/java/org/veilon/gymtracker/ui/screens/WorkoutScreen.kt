@@ -263,8 +263,9 @@ fun ExerciseSetCard(
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically) {
-                Column {
-                    Text(exercise.name, fontWeight = FontWeight.SemiBold)
+                Column(Modifier.weight(1f)) {
+                    Text(exercise.name, fontWeight = FontWeight.SemiBold,
+                        maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                     Text(exercise.muscleGroup, style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
