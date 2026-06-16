@@ -67,3 +67,33 @@ A running checklist of what's done and what's outstanding. Edit freely.
   to generate all densities + adaptive icon from a single source image.
 - [ ] **Wordmark inside the app** — show "Forj" somewhere in-app (Profile hub header
   or a small Home wordmark). Optional polish.
+## Field-testing feedback
+Grouped by size. Order TBD.
+
+### Quick fixes
+- [ ] #2  "Remove" text breaks layout when exercise name is long (Row weighting).
+- [ ] #14 Viewing a past workout shows "Workout" instead of the real name
+  (SessionDetailScreen still passes a hardcoded title — load real name).
+- [ ] #7  Completed sets: highlight the whole row, not just the check.
+- [ ] #8  Block marking a set complete if reps OR weight is empty/zero.
+- [ ] #11 Confirmation dialog before removing an exercise or a workout plan.
+- [ ] #10 Keyboard / FAB hides the input field at bottom of screen
+  (imePadding + ensure focused field scrolls into view).
+
+### Medium
+- [ ] #1  Reorder exercises within the workout screen (reuse Reorderable lib;
+  needs an orderIndex on the in-workout exercises — currently order is just
+  insertion order of logs).
+- [ ] #3  Rest timer increments: add +30, and allow typing the value manually.
+- [ ] #6  Remove and edit past workouts (from the Log/SessionDetail screen).
+- [ ] #12 PR pill/badge shown in the Log (workout) screen when a set hits a PR.
+- [ ] #13 Workout history card stats: per-exercise sets, total volume, duration.
+- [ ] #9  Scroll lag in the workout screen (THE "stuttery" item — needs profiling;
+  likely the inline OutlinedTextFields recomposing, or unstable list keys).
+
+### Bigger / needs scoping
+- [ ] #4  Different rest timer PER EXERCISE (decision: per-exercise override stored
+  where — on the template exercise? on the in-workout exercise? both?).
+- [ ] #5  Exercise TYPES — some exercises track reps + duration (planks, holds) or
+  duration only, not reps + weight. BIG: needs an exercise "type" field, different
+  input UI per type, and type-aware display/PRs/volume. Almost its own mini-project.
