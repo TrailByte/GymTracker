@@ -27,6 +27,7 @@ import org.veilon.gymtracker.ui.theme.ScreenTitle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.clickable
 
 @Composable
 fun WorkoutScreen(
@@ -129,20 +130,50 @@ fun WorkoutScreen(
     }
 
     if (showRestConfig) {
+        val minuteValues = remember { (0..10).toList() }                    // 0..10
+        val secondValues = remember { (0..50 step 10).toList() }            // 0,10,20,30,40,50
+
+        // Seed indices from current restDuration
+        val curMin = restDuration / 60
+        val curSecStep = ((restDuration % 60) / 10)  // 0..5
+        var minIndex by remember(showRestConfig) {
+            mutableStateOf(minuteValues.indexOf(curMin.coerceIn(0, 10)).coerceAtLeast(0))
+        }
+        var secIndex by remember(showRestConfig) {
+            mutableStateOf(secStepToIndex(curSecStep, secondValues))
+        }
+
+        fun pushDuration() {
+            val total = minuteValues[minIndex] * 60 + secondValues[secIndex]
+            viewModel.setRestDuration(total)
+        }
+
         AlertDialog(
             onDismissRequest = { showRestConfig = false },
             title = { Text("Rest duration") },
             text = {
-                Row(verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    OutlinedButton(onClick = { viewModel.setRestDuration(restDuration - 15) }) {
-                        Text("-15s")
-                    }
-                    Text("${restDuration / 60}:${String.format("%02d", restDuration % 60)}",
-                        style = MaterialTheme.typography.titleLarge)
-                    OutlinedButton(onClick = { viewModel.setRestDuration(restDuration + 15) }) {
-                        Text("+15s")
-                    }
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    WheelPicker(
+                        items = minuteValues.map { it.toString() },
+                        selectedIndex = minIndex,
+                        onSelected = { minIndex = it; pushDuration() },
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text("min", style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.width(16.dp))
+                    WheelPicker(
+                        items = secondValues.map { String.format(java.util.Locale.US, "%02d", it) },
+                        selectedIndex = secIndex,
+                        onSelected = { secIndex = it; pushDuration() },
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text("sec", style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             },
             confirmButton = { TextButton(onClick = { showRestConfig = false }) { Text("Done") } }
@@ -524,4 +555,10 @@ fun formatElapsed(seconds: Int): String {
     val s = seconds % 60
     return if (h > 0) String.format("%d:%02d:%02d", h, m, s)
     else String.format("%d:%02d", m, s)
+}
+
+private fun secStepToIndex(step: Int, secondValues: List<Int>): Int {
+    val target = step * 10
+    val i = secondValues.indexOf(target)
+    return if (i >= 0) i else 0
 }
