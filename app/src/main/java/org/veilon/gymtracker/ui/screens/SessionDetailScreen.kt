@@ -33,7 +33,7 @@ fun SessionDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Workout") },
+                title = { Text(sessionName) },
                 navigationIcon = { TextButton(onClick = onBack) { Text("Back") } }
             )
         },

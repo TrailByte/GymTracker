@@ -24,6 +24,7 @@ fun TemplatesScreen(
     val templates by viewModel.templates.collectAsState()
     var showDialog by remember { mutableStateOf(false) }
     var templateName by remember { mutableStateOf("") }
+    var templateToDelete by remember { mutableStateOf<org.veilon.gymtracker.data.WorkoutTemplate?>(null) }
 
     if (showDialog) {
         AlertDialog(
@@ -48,6 +49,23 @@ fun TemplatesScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    templateToDelete?.let { template ->
+        AlertDialog(
+            onDismissRequest = { templateToDelete = null },
+            title = { Text("Delete template?") },
+            text = { Text("\"${template.name}\" will be permanently deleted.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deleteTemplate(template)
+                    templateToDelete = null
+                }) { Text("Delete") }
+            },
+            dismissButton = {
+                TextButton(onClick = { templateToDelete = null }) { Text("Cancel") }
             }
         )
     }
@@ -96,7 +114,7 @@ fun TemplatesScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(template.name, fontWeight = FontWeight.SemiBold)
-                            IconButton(onClick = { viewModel.deleteTemplate(template) }) {
+                            IconButton(onClick = { templateToDelete = template }) {
                                 Icon(Icons.Default.Delete, contentDescription = "Delete")
                             }
                         }

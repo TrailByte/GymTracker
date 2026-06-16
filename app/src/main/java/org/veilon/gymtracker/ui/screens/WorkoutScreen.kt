@@ -51,6 +51,7 @@ fun WorkoutScreen(
     var showFinishDialog by remember { mutableStateOf(false) }
     var showCancelDialog by remember { mutableStateOf(false) }
     var showRestConfig by remember { mutableStateOf(false) }
+    var exerciseToRemove by remember { mutableStateOf<Exercise?>(null) }
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -145,6 +146,23 @@ fun WorkoutScreen(
         )
     }
 
+    exerciseToRemove?.let { ex ->
+        AlertDialog(
+            onDismissRequest = { exerciseToRemove = null },
+            title = { Text("Remove exercise?") },
+            text = { Text("Remove ${ex.name} and all its sets from this workout?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deleteExercise(sessionId, ex.id)
+                    exerciseToRemove = null
+                }) { Text("Remove") }
+            },
+            dismissButton = {
+                TextButton(onClick = { exerciseToRemove = null }) { Text("Cancel") }
+            }
+        )
+    }
+
     val unitLabel = if (useLbs) "lbs" else "kg"
 
         Scaffold(
@@ -203,7 +221,7 @@ fun WorkoutScreen(
                         onUpdate = { log, reps, weight -> viewModel.updateSet(log, reps, weight) },
                         onToggle = { log -> viewModel.toggleComplete(log) },
                         onDeleteSet = { log -> viewModel.deleteSet(log) },
-                        onDeleteExercise = { viewModel.deleteExercise(sessionId, exerciseId) }
+                        onDeleteExercise = { exerciseToRemove = exercise }
                     )
                     // Rest timer appears under the exercise whose set was just completed
                     if (restTimer != null && restForExerciseId == exerciseId) {
