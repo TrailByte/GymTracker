@@ -106,3 +106,18 @@ Grouped by size. Order TBD.
   (e.g. 1, 3) until next add. Renumber on delete if it bothers.
 - [ ] Log card: in-card scroll for long exercise lists is a nested-scroll combo;
   revisit vs "+N more" if it feels fiddly in use.
+## Scale / performance
+- [ ] **Log screen shouldn't load ALL logs via getAllLogs().** At years of data this
+  pulls everything into memory. Infinite scroll itself is FINE (LazyColumn already
+  renders only visible cards) — the issue is querying everything at once. Fix:
+  paginate the history query (load a page, fetch more on scroll) and/or precompute
+  per-session stats. Keep the infinite-scroll feel; just don't load the whole table.
+- [ ] **PR detection should be a stored per-exercise best, not a live backlog scan.**
+  Computing PRs against an unbounded history doesn't scale. Add a stored "personal
+  best" per exercise (best weight, best volume — likely a new column/table), updated
+  when a set is completed. PR check becomes O(1): is this set > stored best.
+  - Schema addition justified here (caching a derived fact to avoid unbounded compute).
+  - Caveat: stored bests can drift if past sets are edited/deleted → need to handle
+    recompute-on-edit, or accept minor drift.
+  - The current #12 live computation is fine for now at small data sizes; this is
+    the "before it's a real backlog" upgrade.
