@@ -128,6 +128,12 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
                     workoutDao.updateLog(it.copy(completed = true))
                 }
             }
+            // Record total duration (now - start) on the session
+            val session = workoutDao.getSession(sessionId)
+            if (session != null) {
+                val durationSec = ((System.currentTimeMillis() - session.date) / 1000).coerceAtLeast(0)
+                workoutDao.updateSession(session.copy(durationSeconds = durationSec))
+            }
             _restTimerSeconds.value = null
             onDone()
         }

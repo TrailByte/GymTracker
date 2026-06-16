@@ -7,5 +7,6 @@ import androidx.room.PrimaryKey
 data class WorkoutSession(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
-    val date: Long = System.currentTimeMillis()
+    val date: Long = System.currentTimeMillis(),
+    val durationSeconds: Long? = null
 )

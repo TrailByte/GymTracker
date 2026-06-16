@@ -16,6 +16,9 @@ import org.veilon.gymtracker.ui.LogViewModel
 import org.veilon.gymtracker.ui.theme.ScreenTitle
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.heightIn
 
 @Composable
 fun LogScreen(
@@ -24,7 +27,7 @@ fun LogScreen(
     viewModel: LogViewModel = viewModel()
 ) {
     val state by viewModel.state.collectAsState()
-
+    val useLbs by viewModel.useLbs.collectAsState()
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -90,13 +93,51 @@ fun LogScreen(
                     modifier = Modifier.fillMaxWidth(),
                     onClick = { onOpenSession(session.id) }
                 ) {
-                    Column(Modifier.padding(16.dp)) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(session.name, fontWeight = FontWeight.SemiBold)
                         Text(date, style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+                        val stats = state.statsBySession[session.id]
+                        if (stats != null) {
+                            Spacer(Modifier.height(4.dp))
+                            // Exercise list, capped height with internal scroll
+                            Column(
+                                modifier = Modifier
+                                    .heightIn(max = 120.dp)
+                                    .verticalScroll(rememberScrollState())
+                            ) {
+                                stats.exercises.forEach { line ->
+                                    Text(
+                                        "${line.setCount}× ${line.name}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                                    )
+                                }
+                            }
+
+                            Spacer(Modifier.height(6.dp))
+                            // Footer: duration · volume · PR pill (PR pill comes in #12)
+                            val volText = org.veilon.gymtracker.ui.formatWeight(stats.totalVolumeKg, useLbs)
+                            val footer = buildList {
+                                session.durationSeconds?.let { add(formatDuration(it)) }
+                                add("$volText vol")
+                            }.joinToString("  ·  ")
+                            Text(
+                                footer,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }
         }
     }
+}
+
+fun formatDuration(seconds: Long): String {
+    val h = seconds / 3600
+    val m = (seconds % 3600) / 60
+    return if (h > 0) "${h}h ${m}m" else "${m}m"
 }
