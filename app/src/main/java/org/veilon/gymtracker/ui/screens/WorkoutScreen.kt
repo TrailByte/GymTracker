@@ -24,7 +24,7 @@ import org.veilon.gymtracker.ui.WorkoutViewModel
 import org.veilon.gymtracker.ui.displayWeight
 import org.veilon.gymtracker.ui.toKg
 import org.veilon.gymtracker.ui.theme.ScreenTitle
-
+import androidx.compose.foundation.background
 @Composable
 fun WorkoutScreen(
     sessionId: Long,
@@ -304,7 +304,20 @@ fun SetRow(
         mutableStateOf(if (log.weight > 0) displayWeight(log.weight, useLbs) else "")
     }
 
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+    // A set can only be completed if it has both reps and weight entered
+    val canComplete = (repsText.toIntOrNull() ?: 0) > 0 && (weightText.toDoubleOrNull() ?: 0.0) > 0.0
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                if (log.completed) Color(0xFF7FA563).copy(alpha = 0.15f)
+                else Color.Transparent,
+                shape = MaterialTheme.shapes.small
+            )
+            .padding(horizontal = 8.dp, vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Text("${log.setNumber}", Modifier.weight(0.6f))
         OutlinedTextField(
             value = repsText,
@@ -333,12 +346,16 @@ fun SetRow(
             textStyle = androidx.compose.ui.text.TextStyle(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
         )
         Box(Modifier.weight(0.6f), contentAlignment = Alignment.Center) {
-            IconButton(onClick = { onToggle(log) }) {
+            IconButton(
+                onClick = { onToggle(log) },
+                enabled = canComplete || log.completed  // can always un-complete
+            ) {
                 Icon(
                     Icons.Default.Check,
                     contentDescription = "Mark complete",
                     tint = if (log.completed) Color(0xFF7FA563)
-                    else MaterialTheme.colorScheme.onSurfaceVariant
+                    else if (canComplete) MaterialTheme.colorScheme.onSurfaceVariant
+                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
                 )
             }
         }
