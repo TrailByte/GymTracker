@@ -26,7 +26,7 @@ import org.veilon.gymtracker.ui.toKg
 import org.veilon.gymtracker.ui.theme.ScreenTitle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.imePadding
-
+import androidx.compose.foundation.combinedClickable
 
 @Composable
 fun WorkoutScreen(
@@ -316,6 +316,7 @@ fun ExerciseSetCard(
     }
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun SetRow(
     log: ExerciseLog,
@@ -328,60 +329,98 @@ fun SetRow(
     var weightText by remember(log.id) {
         mutableStateOf(if (log.weight > 0) displayWeight(log.weight, useLbs) else "")
     }
+    var pendingDelete by remember(log.id) { mutableStateOf(false) }
+    var visible by remember(log.id) { mutableStateOf(true) }
 
-    // A set can only be completed if it has both reps and weight entered
     val canComplete = (repsText.toIntOrNull() ?: 0) > 0 && (weightText.toDoubleOrNull() ?: 0.0) > 0.0
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                if (log.completed) Color(0xFF7FA563).copy(alpha = 0.15f)
-                else Color.Transparent,
-                shape = MaterialTheme.shapes.small
-            )
-            .padding(horizontal = 8.dp, vertical = 2.dp),
-        verticalAlignment = Alignment.CenterVertically
+    androidx.compose.animation.AnimatedVisibility(
+        visible = visible,
+        exit = androidx.compose.animation.shrinkVertically() + androidx.compose.animation.fadeOut()
     ) {
-        Text("${log.setNumber}", Modifier.weight(0.6f))
-        OutlinedTextField(
-            value = repsText,
-            onValueChange = {
-                repsText = it.filter { c -> c.isDigit() }
-                val reps = repsText.toIntOrNull() ?: 0
-                val kg = toKg(weightText.toDoubleOrNull() ?: 0.0, useLbs)
-                onUpdate(log, reps, kg)
-            },
-            modifier = Modifier.weight(1f).padding(end = 4.dp),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            singleLine = true,
-            textStyle = androidx.compose.ui.text.TextStyle(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
-        )
-        OutlinedTextField(
-            value = weightText,
-            onValueChange = {
-                weightText = it.filter { c -> c.isDigit() || c == '.' }
-                val reps = repsText.toIntOrNull() ?: 0
-                val kg = toKg(weightText.toDoubleOrNull() ?: 0.0, useLbs)
-                onUpdate(log, reps, kg)
-            },
-            modifier = Modifier.weight(1f).padding(end = 4.dp),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-            singleLine = true,
-            textStyle = androidx.compose.ui.text.TextStyle(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
-        )
-        Box(Modifier.weight(0.6f), contentAlignment = Alignment.Center) {
-            IconButton(
-                onClick = { onToggle(log) },
-                enabled = canComplete || log.completed  // can always un-complete
+        if (pendingDelete) {
+            // Confirm-delete state: red-tinted row with Delete / Cancel
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        MaterialTheme.colorScheme.error.copy(alpha = 0.12f),
+                        shape = MaterialTheme.shapes.small
+                    )
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    Icons.Default.Check,
-                    contentDescription = "Mark complete",
-                    tint = if (log.completed) Color(0xFF7FA563)
-                    else if (canComplete) MaterialTheme.colorScheme.onSurfaceVariant
-                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                Text("Delete set ${log.setNumber}?",
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium)
+                Row {
+                    TextButton(onClick = { pendingDelete = false }) { Text("Cancel") }
+                    TextButton(onClick = {
+                        visible = false          // trigger exit animation
+                        onDeleteSet(log)         // remove from DB; row leaves the list
+                    }) {
+                        Text("Delete", color = MaterialTheme.colorScheme.error)
+                    }
+                }
+            }
+        } else {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        if (log.completed) Color(0xFF7FA563).copy(alpha = 0.15f)
+                        else Color.Transparent,
+                        shape = MaterialTheme.shapes.small
+                    )
+                    .combinedClickable(
+                        onClick = {},
+                        onLongClick = { pendingDelete = true }
+                    )
+                    .padding(horizontal = 8.dp, vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("${log.setNumber}", Modifier.weight(0.6f))
+                OutlinedTextField(
+                    value = repsText,
+                    onValueChange = {
+                        repsText = it.filter { c -> c.isDigit() }
+                        val reps = repsText.toIntOrNull() ?: 0
+                        val kg = toKg(weightText.toDoubleOrNull() ?: 0.0, useLbs)
+                        onUpdate(log, reps, kg)
+                    },
+                    modifier = Modifier.weight(1f).padding(end = 4.dp),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                    textStyle = androidx.compose.ui.text.TextStyle(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
                 )
+                OutlinedTextField(
+                    value = weightText,
+                    onValueChange = {
+                        weightText = it.filter { c -> c.isDigit() || c == '.' }
+                        val reps = repsText.toIntOrNull() ?: 0
+                        val kg = toKg(weightText.toDoubleOrNull() ?: 0.0, useLbs)
+                        onUpdate(log, reps, kg)
+                    },
+                    modifier = Modifier.weight(1f).padding(end = 4.dp),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    singleLine = true,
+                    textStyle = androidx.compose.ui.text.TextStyle(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+                )
+                Box(Modifier.weight(0.6f), contentAlignment = Alignment.Center) {
+                    IconButton(
+                        onClick = { onToggle(log) },
+                        enabled = canComplete || log.completed
+                    ) {
+                        Icon(
+                            Icons.Default.Check,
+                            contentDescription = "Mark complete",
+                            tint = if (log.completed) Color(0xFF7FA563)
+                            else if (canComplete) MaterialTheme.colorScheme.onSurfaceVariant
+                            else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                        )
+                    }
+                }
             }
         }
     }
