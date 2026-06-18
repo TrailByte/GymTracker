@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -17,7 +18,7 @@ import kotlinx.coroutines.launch
         WorkoutTemplate::class,
         TemplateExercise::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -29,6 +30,35 @@ abstract class AppDatabase : RoomDatabase() {
     companion object {
         @Volatile private var INSTANCE: AppDatabase? = null
 
+        // Defensive 1->2 migration. Because the DB version was never bumped while
+        // columns were added during dev, different "version 1" databases exist.
+        // We add each column only if it's actually missing.
+        private val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                addColumnIfMissing(db, "workout_sessions", "durationSeconds", "INTEGER")
+                addColumnIfMissing(db, "exercises", "archived", "INTEGER NOT NULL DEFAULT 0")
+                addColumnIfMissing(db, "exercise_logs", "completed", "INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        private fun addColumnIfMissing(
+            db: SupportSQLiteDatabase,
+            table: String,
+            column: String,
+            type: String
+        ) {
+            val cursor = db.query("PRAGMA table_info(`$table`)")
+            var exists = false
+            val nameIdx = cursor.getColumnIndex("name")
+            while (cursor.moveToNext()) {
+                if (cursor.getString(nameIdx) == column) { exists = true; break }
+            }
+            cursor.close()
+            if (!exists) {
+                db.execSQL("ALTER TABLE `$table` ADD COLUMN `$column` $type")
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 Room.databaseBuilder(
@@ -36,6 +66,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "gymtracker.db"
                 )
+                    .addMigrations(MIGRATION_1_2)
                     .addCallback(object : Callback() {
                         override fun onCreate(db: SupportSQLiteDatabase) {
                             super.onCreate(db)
@@ -53,26 +84,46 @@ abstract class AppDatabase : RoomDatabase() {
 
         private val seedExercises = listOf(
             Exercise(name = "Bench Press", muscleGroup = "Chest"),
-            Exercise(name = "Incline Dumbbell Press", muscleGroup = "Chest"),
+            Exercise(name = "Bench Press (Smith)", muscleGroup = "Chest"),
             Exercise(name = "Cable Fly", muscleGroup = "Chest"),
-            Exercise(name = "Overhead Press", muscleGroup = "Shoulders"),
-            Exercise(name = "Lateral Raise", muscleGroup = "Shoulders"),
-            Exercise(name = "Face Pull", muscleGroup = "Shoulders"),
-            Exercise(name = "Barbell Row", muscleGroup = "Back"),
+            Exercise(name = "Incline Bench Press", muscleGroup = "Chest"),
+            Exercise(name = "Incline Bench Press (Dumbbell)", muscleGroup = "Chest"),
+            Exercise(name = "Incline Bench Press (Smith)", muscleGroup = "Chest"),
+            Exercise(name = "Incline Chest Press (Machine)", muscleGroup = "Chest"),
+            Exercise(name = "Incline Dumbbell Press", muscleGroup = "Chest"),
+            Exercise(name = "Incline Press", muscleGroup = "Chest"),
+            Exercise(name = "Iso-Lateral Chest Press (Machine)", muscleGroup = "Chest"),
+            Exercise(name = "Bent Over Row (Barbell)", muscleGroup = "Back"),
+            Exercise(name = "Bent Over Row - Underhand (Barbell)", muscleGroup = "Back"),
             Exercise(name = "Lat Pulldown", muscleGroup = "Back"),
             Exercise(name = "Pull-Up", muscleGroup = "Back"),
             Exercise(name = "Seated Row", muscleGroup = "Back"),
-            Exercise(name = "Squat", muscleGroup = "Legs"),
+            Exercise(name = "Face Pull", muscleGroup = "Shoulders"),
+            Exercise(name = "Lateral Raise", muscleGroup = "Shoulders"),
+            Exercise(name = "Overhead Press (Barbell)", muscleGroup = "Shoulders"),
+            Exercise(name = "Overhead Press (Dumbbell)", muscleGroup = "Shoulders"),
+            Exercise(name = "Seated Overhead Press (Barbell)", muscleGroup = "Shoulders"),
+            Exercise(name = "Seated Overhead Press (Dumbell)", muscleGroup = "Shoulders"),
+            Exercise(name = "Shoulder Press", muscleGroup = "Shoulders"),
+            Exercise(name = "Shoulder Press (Machine)", muscleGroup = "Shoulders"),
             Exercise(name = "Deadlift", muscleGroup = "Legs"),
+            Exercise(name = "Leg Curl", muscleGroup = "Legs"),
             Exercise(name = "Leg Press", muscleGroup = "Legs"),
             Exercise(name = "Romanian Deadlift", muscleGroup = "Legs"),
-            Exercise(name = "Leg Curl", muscleGroup = "Legs"),
-            Exercise(name = "Bicep Curl", muscleGroup = "Arms"),
+            Exercise(name = "Squat", muscleGroup = "Legs"),
+            Exercise(name = "Bicep Curl (Barbell)", muscleGroup = "Arms"),
+            Exercise(name = "Bicep Curl (Cable)", muscleGroup = "Arms"),
+            Exercise(name = "Bicep Curl (Dumbbell)", muscleGroup = "Arms"),
             Exercise(name = "Hammer Curl", muscleGroup = "Arms"),
-            Exercise(name = "Tricep Pushdown", muscleGroup = "Arms"),
+            Exercise(name = "Incline Curl (Dumbbell)", muscleGroup = "Arms"),
+            Exercise(name = "Preacher Curl (Machine)", muscleGroup = "Arms"),
             Exercise(name = "Skull Crusher", muscleGroup = "Arms"),
-            Exercise(name = "Plank", muscleGroup = "Core"),
+            Exercise(name = "Tricep Pushdown", muscleGroup = "Arms"),
+            Exercise(name = "Triceps Extension", muscleGroup = "Arms"),
+            Exercise(name = "Triceps Pushdown (Cable - Rope)", muscleGroup = "Arms"),
             Exercise(name = "Cable Crunch", muscleGroup = "Core"),
+            Exercise(name = "Plank", muscleGroup = "Core"),
+            Exercise(name = "Weighted Planks", muscleGroup = "Core"),
         )
     }
 }
