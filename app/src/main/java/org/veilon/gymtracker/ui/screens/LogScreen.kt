@@ -19,7 +19,9 @@ import java.util.*
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.combinedClickable
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun LogScreen(
     onResumeActive: (Long) -> Unit,
@@ -28,6 +30,25 @@ fun LogScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val useLbs by viewModel.useLbs.collectAsState()
+    var sessionToDelete by remember { mutableStateOf<org.veilon.gymtracker.data.WorkoutSession?>(null) }
+
+    sessionToDelete?.let { session ->
+        AlertDialog(
+            onDismissRequest = { sessionToDelete = null },
+            title = { Text("Delete workout?") },
+            text = { Text("\"${session.name}\" and all its logged sets will be permanently deleted.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deleteSession(session)
+                    sessionToDelete = null
+                }) { Text("Delete") }
+            },
+            dismissButton = {
+                TextButton(onClick = { sessionToDelete = null }) { Text("Cancel") }
+            }
+        )
+    }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -90,8 +111,12 @@ fun LogScreen(
                     SimpleDateFormat("EEE, MMM d · h:mm a", locale).format(Date(session.date))
                 }
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = { onOpenSession(session.id) }
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .combinedClickable(
+                            onClick = { onOpenSession(session.id) },
+                            onLongClick = { sessionToDelete = session }
+                        )
                 ) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(session.name, fontWeight = FontWeight.SemiBold)

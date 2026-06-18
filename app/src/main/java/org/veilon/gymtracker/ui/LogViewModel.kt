@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import org.veilon.gymtracker.data.AppDatabase
 import org.veilon.gymtracker.data.WorkoutSession
+import kotlinx.coroutines.launch
 
 data class ExerciseLine(val name: String, val setCount: Int)
 
@@ -60,4 +61,10 @@ class LogViewModel(app: Application) : AndroidViewModel(app) {
         }
         LogState(active, history, stats)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), LogState(null, emptyList(), emptyMap()))
+
+    fun deleteSession(session: WorkoutSession) {
+        viewModelScope.launch {
+            workoutDao.deleteSession(session)
+        }
+    }
 }
