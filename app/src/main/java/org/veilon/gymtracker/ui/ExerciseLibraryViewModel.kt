@@ -32,20 +32,31 @@ class ExerciseLibraryViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    // Delete if no history; otherwise archive to preserve logged sets
-    fun removeExercise(exercise: Exercise, onResult: (archived: Boolean) -> Unit) {
+    fun removeExercise(
+        exercise: Exercise,
+        onBlocked: () -> Unit,   // has history → can't delete, suggest archive
+        onDeleted: () -> Unit
+    ) {
         viewModelScope.launch {
             val count = dao.logCount(exercise.id)
             if (count > 0) {
-                dao.update(exercise.copy(archived = true))
-                onResult(true)
+                // Has logged history — protect it. Block delete, suggest archive.
+                onBlocked()
             } else {
+                // No history — safe to truly delete. Remove template links first
+                // (so no foreign-key violation), then delete the exercise.
+                dao.removeFromAllTemplates(exercise.id)
                 dao.delete(exercise)
-                onResult(false)
+                onDeleted()
             }
         }
     }
 
+    fun archiveExercise(exercise: Exercise) {
+        viewModelScope.launch {
+            dao.update(exercise.copy(archived = true))
+        }
+    }
     fun restoreExercise(exercise: Exercise) {
         viewModelScope.launch { dao.update(exercise.copy(archived = false)) }
     }

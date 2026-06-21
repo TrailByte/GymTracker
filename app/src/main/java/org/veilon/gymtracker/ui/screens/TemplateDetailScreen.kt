@@ -82,7 +82,10 @@ fun TemplateDetailScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 contentPadding = PaddingValues(top = 16.dp, bottom = 96.dp)
             ) {
-                items(orderedExercises, key = { it.id }) { te ->
+                val visibleExercises = orderedExercises.filter { te ->
+                    allExercises.any { it.id == te.exerciseId }
+                }
+                items(visibleExercises, key = { it.id }) { te ->
                     ReorderableItem(reorderState, key = te.id) { isDragging ->
                         val exercise = allExercises.find { it.id == te.exerciseId }
                         val elevation = if (isDragging) 8.dp else 1.dp

@@ -25,4 +25,7 @@ interface ExerciseDao {
     // How many logs reference this exercise — decides delete vs archive
     @Query("SELECT COUNT(*) FROM exercise_logs WHERE exerciseId = :exerciseId")
     suspend fun logCount(exerciseId: Long): Int
+
+    @Query("DELETE FROM template_exercises WHERE exerciseId = :exerciseId")
+    suspend fun removeFromAllTemplates(exerciseId: Long)
 }

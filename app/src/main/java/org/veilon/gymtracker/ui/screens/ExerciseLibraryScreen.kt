@@ -28,6 +28,7 @@ fun ExerciseLibraryScreen(
     val exercises by viewModel.exercises.collectAsState()
     var editing by remember { mutableStateOf<Exercise?>(null) }
     var showAddEdit by remember { mutableStateOf(false) }
+    var blockedExercise by remember { mutableStateOf<Exercise?>(null) }
 
     if (showAddEdit) {
         ExerciseEditDialog(
@@ -39,6 +40,23 @@ fun ExerciseLibraryScreen(
                 if (current == null) viewModel.addExercise(name, group)
                 else viewModel.updateExercise(current, name, group)
                 showAddEdit = false; editing = null
+            }
+        )
+    }
+
+    blockedExercise?.let { ex ->
+        AlertDialog(
+            onDismissRequest = { blockedExercise = null },
+            title = { Text("Can't delete") },
+            text = { Text("\"${ex.name}\" has workout history, so it can't be deleted. Archive it instead? It'll be hidden from the library, picker, and templates, but your past workouts stay intact.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.archiveExercise(ex)
+                    blockedExercise = null
+                }) { Text("Archive") }
+            },
+            dismissButton = {
+                TextButton(onClick = { blockedExercise = null }) { Text("Cancel") }
             }
         )
     }
@@ -94,7 +112,13 @@ fun ExerciseLibraryScreen(
                             IconButton(onClick = { editing = ex; showAddEdit = true }) {
                                 Icon(Icons.Default.Edit, contentDescription = "Edit")
                             }
-                            TextButton(onClick = { viewModel.removeExercise(ex) {} }) {
+                            TextButton(onClick = {
+                                viewModel.removeExercise(
+                                    ex,
+                                    onBlocked = { blockedExercise = ex },
+                                    onDeleted = { }
+                                )
+                            }) {
                                 Text("Remove")
                             }
                         }
