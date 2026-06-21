@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import org.veilon.gymtracker.data.AppDatabase
 import org.veilon.gymtracker.data.ExerciseLog
+import kotlinx.coroutines.launch
 
 class SessionDetailViewModel(app: Application) : AndroidViewModel(app) {
 
@@ -44,4 +45,12 @@ class SessionDetailViewModel(app: Application) : AndroidViewModel(app) {
             else flowOf(workoutDao.getSession(id)?.name ?: "Workout")
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "Workout")
+
+    fun deleteSession(onDone: () -> Unit) {
+        val id = _sessionId.value ?: return
+        viewModelScope.launch {
+            workoutDao.getSession(id)?.let { workoutDao.deleteSession(it) }
+            onDone()
+        }
+    }
 }

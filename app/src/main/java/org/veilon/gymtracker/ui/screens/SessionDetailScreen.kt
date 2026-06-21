@@ -14,6 +14,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import org.veilon.gymtracker.ui.SessionDetailViewModel
 import org.veilon.gymtracker.ui.formatWeight
 import org.veilon.gymtracker.ui.theme.ScreenTitle
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material.icons.Icons
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -21,6 +25,7 @@ fun SessionDetailScreen(
     sessionId: Long,
     onBack: () -> Unit,
     onRepeat: (Long) -> Unit,
+    onEdit: (Long) -> Unit,
     viewModel: SessionDetailViewModel = viewModel()
 ) {
     LaunchedEffect(sessionId) { viewModel.setSession(sessionId) }
@@ -29,12 +34,55 @@ fun SessionDetailScreen(
     val exercises by viewModel.exercises.collectAsState()
     val useLbs by viewModel.useLbs.collectAsState()
     val sessionName by viewModel.sessionName.collectAsState()
+    var menuExpanded by remember { mutableStateOf(false) }
+    var confirmDelete by remember { mutableStateOf(false) }
+
+    if (confirmDelete) {
+        AlertDialog(
+            onDismissRequest = { confirmDelete = false },
+            title = { Text("Delete workout?") },
+            text = { Text("This workout and all its sets will be permanently deleted.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmDelete = false
+                    viewModel.deleteSession { onBack() }
+                }) { Text("Delete") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmDelete = false }) { Text("Cancel") }
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(sessionName.uppercase()) },
-                navigationIcon = { TextButton(onClick = onBack) { Text("Back") } }
+                navigationIcon = { TextButton(onClick = onBack) { Text("Back") } },
+                actions = {
+                    IconButton(onClick = { menuExpanded = true }) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "More")
+                    }
+                    DropdownMenu(
+                        expanded = menuExpanded,
+                        onDismissRequest = { menuExpanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Edit") },
+                            onClick = {
+                                menuExpanded = false
+                                onEdit(sessionId)
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Delete") },
+                            onClick = {
+                                menuExpanded = false
+                                confirmDelete = true
+                            }
+                        )
+                    }
+                }
             )
         },
         bottomBar = {

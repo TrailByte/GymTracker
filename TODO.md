@@ -122,3 +122,19 @@ Grouped by size. Order TBD.
     recompute-on-edit, or accept minor drift.
   - The current #12 live computation is fine for now at small data sizes; this is
     the "before it's a real backlog" upgrade.
+## Field-testing feedback — round 3
+- [ ] #15 **CRASH (priority): deleting an exercise that's used in a plan crashes.**
+  Cause: template_exercises has a FK to exercises with no onDelete rule, so deleting
+  the exercise violates the constraint. Fix: either block delete / archive when it's
+  in a template (like we do for logged history), or add ON DELETE CASCADE/SET behavior
+  to template_exercises. Decide which. Schema-touching → migration (we now do migrations).
+- [ ] #16 Keep an exercise's volume PR and show it on the exercise card as a
+  target to beat. (Ties into the stored-PR-per-exercise work parked with gamification.)
+- [ ] #17 Log screen: in-progress workout shows BOTH the mini-bar (bottom) AND the
+  resume card (top). Redundant — pick one. Likely keep the top resume card on the Log
+  screen and suppress the mini-bar while actually on the Log tab (or vice versa).
+- [ ] #18 Allow an explicitly typed 0 weight (bodyweight exercises). Currently the
+  complete-guard (#8) requires weight > 0. Need to distinguish "empty/not entered"
+  from "explicitly 0". Bodyweight sets should be completable with 0 weight.
+- [ ] #19 Move the per-exercise rest timer into the exercise title box; keep it
+  visible when the workout is minimized too. (Overlaps with #4 per-exercise timer.)

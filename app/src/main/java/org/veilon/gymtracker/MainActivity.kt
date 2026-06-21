@@ -170,7 +170,11 @@ fun GymTrackerApp(activeVm: ActiveWorkoutViewModel = viewModel()) {
                                 launchSingleTop = true
                             }
                         }
-                    }
+                    },
+                            onEdit = { id ->
+                        // Edit past workout — feature not built yet. Stub: for now, do nothing
+                        // or navigate somewhere safe. Placeholder until the edit feature lands.
+                    },
                 )
             }
         }
