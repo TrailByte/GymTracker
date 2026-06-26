@@ -85,26 +85,36 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
 
     // Count consecutive weeks (ending this week) that met the goal
     private fun computeWeekStreak(dates: List<Long>, goal: Int): Int {
-        if (dates.isEmpty()) return 0
-        // Bucket workout counts by "weeks ago from now"
-        val counts = HashMap<Int, Int>()
-        val now = Calendar.getInstance()
-        val nowWeekKey = now.get(Calendar.YEAR) * 100 + now.get(Calendar.WEEK_OF_YEAR)
-        dates.forEach { d ->
-            val c = Calendar.getInstance().apply { timeInMillis = d }
-            val key = c.get(Calendar.YEAR) * 100 + c.get(Calendar.WEEK_OF_YEAR)
-            val weeksAgo = weeksBetween(c, now)
-            if (key <= nowWeekKey) counts[weeksAgo] = (counts[weeksAgo] ?: 0) + 1
-        }
-        var streak = 0
-        var w = 0
-        while ((counts[w] ?: 0) >= goal) { streak++; w++ }
-        return streak
-    }
+        if (dates.isEmpty() || goal <= 0) return 0
 
-    private fun weeksBetween(from: Calendar, to: Calendar): Int {
-        val fromKey = from.get(Calendar.YEAR) * 53 + from.get(Calendar.WEEK_OF_YEAR)
-        val toKey = to.get(Calendar.YEAR) * 53 + to.get(Calendar.WEEK_OF_YEAR)
-        return toKey - fromKey
+        // Normalize a timestamp to the start-of-week (midnight on the week's first day).
+        fun weekStartMillis(millis: Long): Long {
+            val cal = Calendar.getInstance()
+            cal.timeInMillis = millis
+            cal.set(Calendar.HOUR_OF_DAY, 0)
+            cal.set(Calendar.MINUTE, 0)
+            cal.set(Calendar.SECOND, 0)
+            cal.set(Calendar.MILLISECOND, 0)
+            // Move back to the first day of this week (locale-aware firstDayOfWeek)
+            cal.set(Calendar.DAY_OF_WEEK, cal.firstDayOfWeek)
+            return cal.timeInMillis
+        }
+
+        // Count workouts per week-start bucket
+        val countsByWeekStart = HashMap<Long, Int>()
+        dates.forEach { d ->
+            val ws = weekStartMillis(d)
+            countsByWeekStart[ws] = (countsByWeekStart[ws] ?: 0) + 1
+        }
+
+        // Walk back week by week from the current week
+        val oneWeekMillis = 7L * 24 * 60 * 60 * 1000
+        var cursorWeekStart = weekStartMillis(System.currentTimeMillis())
+        var streak = 0
+        while ((countsByWeekStart[cursorWeekStart] ?: 0) >= goal) {
+            streak++
+            cursorWeekStart -= oneWeekMillis
+        }
+        return streak
     }
 }
