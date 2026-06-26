@@ -363,7 +363,7 @@ fun SetRow(
     var pendingDelete by remember(log.id) { mutableStateOf(false) }
     var visible by remember(log.id) { mutableStateOf(true) }
 
-    val canComplete = (repsText.toIntOrNull() ?: 0) > 0 && (weightText.toDoubleOrNull() ?: 0.0) > 0.0
+    val canComplete = (repsText.toIntOrNull() ?: 0) > 0 && weightText.isNotBlank()
 
     androidx.compose.animation.AnimatedVisibility(
         visible = visible,
