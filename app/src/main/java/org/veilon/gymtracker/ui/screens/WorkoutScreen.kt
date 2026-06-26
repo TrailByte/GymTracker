@@ -40,16 +40,22 @@ fun WorkoutScreen(
 
     val logs by viewModel.logs.collectAsState()
     val exercises by viewModel.exercises.collectAsState()
-    val restTimer by viewModel.restTimerSeconds.collectAsState()
+    val restEndsAt by viewModel.restEndsAt.collectAsState()
     val useLbs by viewModel.useLbs.collectAsState()
     val restDuration by viewModel.restDuration.collectAsState()
     val restForExerciseId by viewModel.restForExerciseId.collectAsState()
     val startTime by viewModel.startTime.collectAsState()
     val sessionName by viewModel.sessionName.collectAsState()
     // A ticking "now" that updates every second while this screen is visible.
-    // Elapsed is computed as now - startTime, so leaving/returning stays accurate.
+    // Both elapsed and rest-remaining are computed from it, so they stay accurate
+    // across navigation/minimize.
     var now by remember { mutableStateOf(System.currentTimeMillis()) }
     val elapsed = startTime?.let { ((now - it) / 1000).toInt().coerceAtLeast(0) } ?: 0
+    // Remaining rest seconds, computed from the stored end timestamp (null = no rest)
+    val restRemaining: Int? = restEndsAt?.let {
+        val rem = ((it - now) / 1000).toInt()
+        if (rem > 0) rem else null
+    }
 
     var showExercisePicker by remember { mutableStateOf(false) }
     var showFinishDialog by remember { mutableStateOf(false) }
@@ -63,8 +69,11 @@ fun WorkoutScreen(
             delay(1000)
         }
     }
-    LaunchedEffect(restTimer) {
-        if (restTimer != null) { delay(1000); viewModel.tickRestTimer() }
+    // When rest naturally elapses, clear the "which exercise" marker
+    LaunchedEffect(restRemaining) {
+        if (restRemaining == null && restEndsAt != null) {
+            viewModel.skipRest()
+        }
     }
 
     if (showExercisePicker) {
@@ -221,6 +230,21 @@ fun WorkoutScreen(
                                 contentDescription = "Minimize"
                             )
                         }
+                    },
+                    actions = {
+                        // Rest countdown lives in the top bar (not between exercises)
+                        if (restRemaining != null) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    "Rest ${restRemaining / 60}:${String.format(java.util.Locale.US, "%02d", restRemaining % 60)}",
+                                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                TextButton(onClick = { viewModel.addRestTime(15) }) { Text("+15") }
+                                TextButton(onClick = { viewModel.skipRest() }) { Text("Skip") }
+                            }
+                        }
                     }
                 )
             }
@@ -261,15 +285,6 @@ fun WorkoutScreen(
                         onDeleteSet = { log -> viewModel.deleteSet(log) },
                         onDeleteExercise = { exerciseToRemove = exercise }
                     )
-                    // Rest timer appears under the exercise whose set was just completed
-                    if (restTimer != null && restForExerciseId == exerciseId) {
-                        Spacer(Modifier.height(8.dp))
-                        RestTimerCard(
-                            seconds = restTimer!!,
-                            onAddTime = { viewModel.addRestTime(15) },
-                            onSkip = { viewModel.skipRest() }
-                        )
-                    }
                 }
             }
 

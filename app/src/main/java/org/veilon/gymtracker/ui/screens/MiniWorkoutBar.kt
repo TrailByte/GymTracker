@@ -16,6 +16,7 @@ import kotlinx.coroutines.delay
 fun MiniWorkoutBar(
     sessionName: String,
     startTimeMillis: Long,
+    restEndsAtMillis: Long?,
     onExpand: () -> Unit
 ) {
     var now by remember { mutableStateOf(System.currentTimeMillis()) }
@@ -30,6 +31,12 @@ fun MiniWorkoutBar(
         String.format(java.util.Locale.US, "%d:%02d:%02d", h, m, s)
     else
         String.format(java.util.Locale.US, "%d:%02d", m, s)
+
+    // Remaining rest, computed from the shared end timestamp
+    val restRemaining: Int? = restEndsAtMillis?.let {
+        val rem = ((it - now) / 1000).toInt()
+        if (rem > 0) rem else null
+    }
 
     Surface(
         onClick = onExpand,
@@ -49,10 +56,21 @@ fun MiniWorkoutBar(
                     color = MaterialTheme.colorScheme.onPrimaryContainer)
             }
             Row(verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(timeText, fontFamily = FontFamily.Monospace,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer)
+                horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                // Show rest countdown when resting, otherwise the elapsed time
+                if (restRemaining != null) {
+                    Text(
+                        "Rest ${restRemaining / 60}:${String.format(java.util.Locale.US, "%02d", restRemaining % 60)}",
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                } else {
+                    Text(timeText, fontFamily = FontFamily.Monospace,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer)
+                }
                 Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Expand",
                     tint = MaterialTheme.colorScheme.onPrimaryContainer)
             }

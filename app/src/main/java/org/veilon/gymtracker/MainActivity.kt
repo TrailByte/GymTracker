@@ -66,10 +66,12 @@ fun GymTrackerApp(activeVm: ActiveWorkoutViewModel = viewModel()) {
                 Column {
                     // Mini workout bar — only when a workout is active and not already on it
                     val active = activeSession
+                    val restEndsAt by activeVm.restEndsAt.collectAsState()
                     if (active != null && currentRoute != "workout/{sessionId}") {
                         MiniWorkoutBar(
                             sessionName = active.name,
                             startTimeMillis = active.date,
+                            restEndsAtMillis = restEndsAt,
                             onExpand = { navController.navigate("workout/${active.id}") }
                         )
                     }

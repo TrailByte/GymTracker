@@ -21,6 +21,10 @@ class ActiveWorkoutViewModel(app: Application) : AndroidViewModel(app) {
     val activeSessionId = UserPreferences.activeSession(app)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
+    // Shared rest-timer end timestamp, so the mini-bar can show the countdown too
+    val restEndsAt = UserPreferences.restEndsAt(app)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     val activeSession = UserPreferences.activeSession(getApplication())
         .flatMapLatest { id ->

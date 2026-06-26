@@ -37,6 +37,7 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
             else workoutDao.getLogsForSession(id)
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     val sessionName: StateFlow<String> = _currentSessionId
         .flatMapLatest { id ->
@@ -45,8 +46,12 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "Workout")
 
-    private val _restTimerSeconds = MutableStateFlow<Int?>(null)
-    val restTimerSeconds = _restTimerSeconds.asStateFlow()
+    // Rest timer is timestamp-based: store WHEN rest ends; compute remaining live.
+    // Lives in DataStore so the mini-bar (different ViewModel) reads the same value
+    // and it survives navigation / minimize / backgrounding.
+    val restEndsAt = UserPreferences.restEndsAt(appContext)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
     private val _restForExerciseId = MutableStateFlow<Long?>(null)
     val restForExerciseId = _restForExerciseId.asStateFlow()
 
@@ -59,7 +64,6 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
     val startTime = _startTime.asStateFlow()
 
     init {
-        // Seed the per-session duration from the saved global default
         viewModelScope.launch {
             _restDuration.value = UserPreferences.restSeconds(appContext).first()
         }
@@ -103,7 +107,11 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
             val nowComplete = !log.completed
             workoutDao.updateLog(log.copy(completed = nowComplete))
             if (nowComplete) {
-                _restTimerSeconds.value = _restDuration.value
+                // Start rest: store the moment it ends
+                UserPreferences.setRestEndsAt(
+                    appContext,
+                    System.currentTimeMillis() + _restDuration.value * 1000L
+                )
                 _restForExerciseId.value = log.exerciseId
             }
         }
@@ -128,13 +136,13 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
                     workoutDao.updateLog(it.copy(completed = true))
                 }
             }
-            // Record total duration (now - start) on the session
             val session = workoutDao.getSession(sessionId)
             if (session != null) {
                 val durationSec = ((System.currentTimeMillis() - session.date) / 1000).coerceAtLeast(0)
                 workoutDao.updateSession(session.copy(durationSeconds = durationSec))
             }
-            _restTimerSeconds.value = null
+            UserPreferences.setRestEndsAt(appContext, null)
+            _restForExerciseId.value = null
             onDone()
         }
     }
@@ -143,24 +151,23 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
     fun cancelWorkout(sessionId: Long, onDone: () -> Unit) {
         viewModelScope.launch {
             workoutDao.deleteSession(WorkoutSession(id = sessionId, name = "", date = 0))
-            _restTimerSeconds.value = null
+            UserPreferences.setRestEndsAt(appContext, null)
+            _restForExerciseId.value = null
             onDone()
         }
     }
 
-
     fun addRestTime(seconds: Int) {
-        _restTimerSeconds.value = (_restTimerSeconds.value ?: 0) + seconds
-    }
-
-    fun tickRestTimer() {
-        val current = _restTimerSeconds.value ?: return
-        _restTimerSeconds.value = if (current <= 1) null else current - 1
-        if (_restTimerSeconds.value == null) _restForExerciseId.value = null
+        viewModelScope.launch {
+            val current = restEndsAt.value ?: System.currentTimeMillis()
+            UserPreferences.setRestEndsAt(appContext, current + seconds * 1000L)
+        }
     }
 
     fun skipRest() {
-        _restTimerSeconds.value = null
-        _restForExerciseId.value = null
+        viewModelScope.launch {
+            UserPreferences.setRestEndsAt(appContext, null)
+            _restForExerciseId.value = null
+        }
     }
 }

@@ -16,6 +16,7 @@ object UserPreferences {
     private val USE_LBS: Preferences.Key<Boolean> = booleanPreferencesKey("use_lbs")
     private val REST_SECONDS: Preferences.Key<Int> = intPreferencesKey("rest_seconds")
     private val ACTIVE_SESSION: Preferences.Key<Long> = longPreferencesKey("active_session")
+    private val REST_ENDS_AT: Preferences.Key<Long> = longPreferencesKey("rest_ends_at")
     private val WEEKLY_GOAL: Preferences.Key<Int> = intPreferencesKey("weekly_goal")
 
     fun useLbs(context: Context): Flow<Boolean> =
@@ -42,6 +43,19 @@ object UserPreferences {
         context.dataStore.edit { prefs ->
             if (sessionId == null) prefs.remove(ACTIVE_SESSION)
             else prefs[ACTIVE_SESSION] = sessionId
+        }
+    }
+
+    // Timestamp (epoch millis) when the current rest period ends; null = not resting
+    fun restEndsAt(context: Context): Flow<Long?> =
+        context.dataStore.data.map { prefs ->
+            prefs[REST_ENDS_AT]?.let { if (it <= 0L) null else it }
+        }
+
+    suspend fun setRestEndsAt(context: Context, endsAt: Long?) {
+        context.dataStore.edit { prefs ->
+            if (endsAt == null) prefs.remove(REST_ENDS_AT)
+            else prefs[REST_ENDS_AT] = endsAt
         }
     }
 
