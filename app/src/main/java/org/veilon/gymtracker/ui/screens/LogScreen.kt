@@ -3,8 +3,6 @@ package org.veilon.gymtracker.ui.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,7 +22,6 @@ import androidx.compose.foundation.combinedClickable
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun LogScreen(
-    onResumeActive: (Long) -> Unit,
     onOpenSession: (Long) -> Unit,
     viewModel: LogViewModel = viewModel()
 ) {
@@ -57,38 +54,6 @@ fun LogScreen(
         item {
             ScreenTitle("Log")
             Spacer(Modifier.height(4.dp))
-        }
-
-        // Active workout resume card, pinned on top when one's running
-        state.activeSession?.let { active ->
-            item {
-                Card(
-                    onClick = { onResumeActive(active.id) },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                    )
-                ) {
-                    Row(
-                        Modifier.padding(16.dp).fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Default.PlayArrow, contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer)
-                        Column(Modifier.weight(1f)) {
-                            Text("IN PROGRESS",
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer)
-                            Text(active.name, fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer)
-                        }
-                        Text("Resume", color = MaterialTheme.colorScheme.onPrimaryContainer)
-                    }
-                }
-                Spacer(Modifier.height(8.dp))
-            }
         }
 
         item {

@@ -117,7 +117,6 @@ fun GymTrackerApp(activeVm: ActiveWorkoutViewModel = viewModel()) {
             }
             composable(Screen.Log.route) {
                 LogScreen(
-                    onResumeActive = { sessionId -> navController.navigate("workout/$sessionId") },
                     onOpenSession = { sessionId -> navController.navigate("session/$sessionId") }
                 )
             }
