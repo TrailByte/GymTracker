@@ -23,11 +23,19 @@ import org.veilon.gymtracker.data.ExerciseLog
 import org.veilon.gymtracker.ui.WorkoutViewModel
 import org.veilon.gymtracker.ui.displayWeight
 import org.veilon.gymtracker.ui.toKg
-import org.veilon.gymtracker.ui.theme.ScreenTitle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.clickable
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.foundation.layout.width
 
 @Composable
 fun WorkoutScreen(
@@ -62,6 +70,7 @@ fun WorkoutScreen(
     var showCancelDialog by remember { mutableStateOf(false) }
     var showRestConfig by remember { mutableStateOf(false) }
     var exerciseToRemove by remember { mutableStateOf<Exercise?>(null) }
+    var restMenuOpen by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -214,13 +223,17 @@ fun WorkoutScreen(
                 TopAppBar(
                     title = {
                         Column {
-                            Text(sessionName.uppercase(),
+                            Text(
+                                sessionName.uppercase(),
                                 style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold)
-                            Text(formatElapsed(elapsed),
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                formatElapsed(elapsed),
                                 style = MaterialTheme.typography.bodySmall,
                                 fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     },
                     navigationIcon = {
@@ -232,17 +245,34 @@ fun WorkoutScreen(
                         }
                     },
                     actions = {
-                        // Rest countdown lives in the top bar (not between exercises)
                         if (restRemaining != null) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    "Rest ${restRemaining / 60}:${String.format(java.util.Locale.US, "%02d", restRemaining % 60)}",
-                                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
+                            Box {
+                                RestPill(
+                                    remainingSeconds = restRemaining,
+                                    totalSeconds = restDuration,
+                                    onClick = { restMenuOpen = true }
                                 )
-                                TextButton(onClick = { viewModel.addRestTime(15) }) { Text("+15") }
-                                TextButton(onClick = { viewModel.skipRest() }) { Text("Skip") }
+                                DropdownMenu(
+                                    expanded = restMenuOpen,
+                                    onDismissRequest = { restMenuOpen = false }
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text("+15 seconds") },
+                                        onClick = {
+                                            viewModel.addRestTime(15); restMenuOpen = false
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("+30 seconds") },
+                                        onClick = {
+                                            viewModel.addRestTime(30); restMenuOpen = false
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Skip rest") },
+                                        onClick = { viewModel.skipRest(); restMenuOpen = false }
+                                    )
+                                }
                             }
                         }
                     }
@@ -473,24 +503,62 @@ fun SetRow(
 }
 
 @Composable
-fun RestTimerCard(seconds: Int, onAddTime: () -> Unit, onSkip: () -> Unit) {
-    val mins = seconds / 60
-    val secs = seconds % 60
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+fun RestPill(
+    remainingSeconds: Int,
+    totalSeconds: Int,
+    onClick: () -> Unit
+) {
+    val fraction = if (totalSeconds > 0)
+        (remainingSeconds.toFloat() / totalSeconds.toFloat()).coerceIn(0f, 1f)
+    else 0f
+    val animatedFraction by animateFloatAsState(
+        targetValue = fraction,
+        animationSpec = tween(durationMillis = 1000, easing = LinearEasing),
+        label = "restDrain"
+    )
+
+    val mins = remainingSeconds / 60
+    val secs = remainingSeconds % 60
+    val label = "${mins}:${String.format(java.util.Locale.US, "%02d", secs)}"
+
+    Box(
+        modifier = Modifier
+            .padding(end = 8.dp)
+            .width(96.dp)              // fixed pill width
+            .height(32.dp)
+            .clip(RoundedCornerShape(50))
+            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.20f))
+            .clickable { onClick() }
     ) {
-        Column(Modifier.padding(16.dp)) {
-            Text("Rest", fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace, style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer)
-            Text(String.format("%d:%02d", mins, secs),
-                style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onPrimaryContainer)
-            Spacer(Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = onAddTime) { Text("+15s") }
-                Button(onClick = onSkip) { Text("Skip") }
-            }
+        // Draining iron-red fill, relative to the fixed pill width
+        Box(
+            modifier = Modifier
+                .fillMaxHeight()
+                .fillMaxWidth(animatedFraction)
+                .clip(RoundedCornerShape(50))
+                .background(MaterialTheme.colorScheme.primary)
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                Icons.Default.Timer,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp),
+                tint = MaterialTheme.colorScheme.onPrimary
+            )
+            Spacer(Modifier.width(4.dp))
+            Text(
+                label,
+                style = MaterialTheme.typography.labelLarge,
+                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimary
+            )
         }
     }
 }
