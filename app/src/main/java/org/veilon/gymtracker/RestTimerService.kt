@@ -21,8 +21,7 @@ class RestTimerService : Service() {
         const val ACTION_START = "start_rest"
         const val ACTION_STOP = "stop_rest"
 
-        // Request codes for the four alarms (-3s, -2s, -1s, finish)
-        private val REQ_CODES = intArrayOf(7001, 7002, 7003, 7000)
+        private const val REQ_FINISH = 7000
 
         fun start(context: Context, endsAtMillis: Long) {
             val i = Intent(context, RestTimerService::class.java).apply {
@@ -42,67 +41,56 @@ class RestTimerService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            ACTION_STOP -> {
-                cancelAlarms()
-                stopForeground(STOP_FOREGROUND_REMOVE)
-                stopSelf()
-                return START_NOT_STICKY
-            }
             ACTION_START -> {
                 val endsAt = intent.getLongExtra(EXTRA_ENDS_AT, 0L)
                 createChannel()
                 startForeground(NOTIF_ID, buildNotification(endsAt))
-                scheduleAlarms(endsAt)
+                scheduleFinishAlarm(endsAt)
+            }
+            else -> {
+                // ACTION_STOP, or a null/unknown redelivered intent:
+                // tear down cleanly so we never leave a dangling notification.
+                teardown()
+                return START_NOT_STICKY
             }
         }
-        return START_STICKY
+        // Never let Android resurrect this service on its own.
+        return START_NOT_STICKY
     }
 
-    private fun alarmPI(kind: String, reqCode: Int): PendingIntent {
+    private fun teardown() {
+        cancelFinishAlarm()
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
+    }
+
+    private fun finishPI(): PendingIntent {
         val i = Intent(this, RestAlarmReceiver::class.java).apply {
-            putExtra(RestAlarmReceiver.EXTRA_KIND, kind)
+            putExtra(RestAlarmReceiver.EXTRA_KIND, RestAlarmReceiver.KIND_FINISH)
         }
         return PendingIntent.getBroadcast(
-            this, reqCode, i,
+            this, REQ_FINISH, i,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
     }
 
-    private fun scheduleAlarms(endsAt: Long) {
+    private fun scheduleFinishAlarm(endsAt: Long) {
         val am = getSystemService(AlarmManager::class.java)
-        cancelAlarms()
+        cancelFinishAlarm()
         val now = System.currentTimeMillis()
-
-        // Can we schedule exact alarms? (Android 12+ may deny it.)
+        val triggerAt = endsAt.coerceAtLeast(now + 1)
         val canExact = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             am.canScheduleExactAlarms()
         } else true
-
-        fun schedule(triggerAt: Long, pi: PendingIntent) {
-            if (triggerAt <= now) return
-            if (canExact) {
-                am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pi)
-            } else {
-                // Fallback: inexact but still fires in Doze (may be delayed slightly).
-                // The in-app timer is the primary path anyway when the app is open.
-                am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pi)
-            }
+        if (canExact) {
+            am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, finishPI())
+        } else {
+            am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, finishPI())
         }
-
-        // 3-2-1 buzzes
-        schedule(endsAt - 3000, alarmPI(RestAlarmReceiver.KIND_BUZZ, REQ_CODES[0]))
-        schedule(endsAt - 2000, alarmPI(RestAlarmReceiver.KIND_BUZZ, REQ_CODES[1]))
-        schedule(endsAt - 1000, alarmPI(RestAlarmReceiver.KIND_BUZZ, REQ_CODES[2]))
-        // finish
-        schedule(endsAt.coerceAtLeast(now + 1), alarmPI(RestAlarmReceiver.KIND_FINISH, REQ_CODES[3]))
     }
 
-    private fun cancelAlarms() {
-        val am = getSystemService(AlarmManager::class.java)
-        REQ_CODES.forEachIndexed { idx, code ->
-            val kind = if (idx == 3) RestAlarmReceiver.KIND_FINISH else RestAlarmReceiver.KIND_BUZZ
-            am.cancel(alarmPI(kind, code))
-        }
+    private fun cancelFinishAlarm() {
+        getSystemService(AlarmManager::class.java).cancel(finishPI())
     }
 
     private fun buildNotification(endsAt: Long): Notification {

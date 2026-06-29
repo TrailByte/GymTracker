@@ -11,27 +11,23 @@ class RestAlarmReceiver : BroadcastReceiver() {
 
     companion object {
         const val EXTRA_KIND = "kind"
-        const val KIND_BUZZ = "buzz"     // one of the 3-2-1 countdown buzzes
         const val KIND_FINISH = "finish" // rest is over: sound + double buzz
     }
 
     override fun onReceive(context: Context, intent: Intent?) {
-        // Dedup with the in-app timer: it clears restEndsAt when it fires.
-        // If rest is no longer active, the in-app path already handled it → stay silent.
-        val endsAt = runBlocking {
-            UserPreferences.restEndsAt(context).first()
-        } ?: return
+        if (intent?.getStringExtra(EXTRA_KIND) != KIND_FINISH) return
 
-        when (intent?.getStringExtra(EXTRA_KIND)) {
-            KIND_BUZZ -> {
-                // Only buzz if we're genuinely still counting down
-                if (System.currentTimeMillis() < endsAt) RestAlerts.buzz(context)
-            }
-            KIND_FINISH -> {
-                RestAlerts.finishAlert(context)
-                runBlocking { UserPreferences.setRestEndsAt(context, null) }
-                RestTimerService.stop(context)
-            }
+        // Guard: only fire if rest is still active (user may have skipped/finished,
+        // which clears restEndsAt and cancels this alarm — but this is a belt-and-braces check).
+        val endsAt = runBlocking { UserPreferences.restEndsAt(context).first() }
+        if (endsAt == null) {
+            // Already cleared — just make sure the notification is gone.
+            RestTimerService.stop(context)
+            return
         }
+
+        RestAlerts.finishAlert(context)
+        runBlocking { UserPreferences.setRestEndsAt(context, null) }
+        RestTimerService.stop(context)
     }
 }
