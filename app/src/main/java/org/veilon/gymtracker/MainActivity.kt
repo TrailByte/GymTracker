@@ -26,6 +26,7 @@ import org.veilon.gymtracker.ui.theme.GymTrackerTheme
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.foundation.layout.Column
+import android.os.Build
 
 sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
     object Home : Screen("home", "Home", Icons.Default.Home)
@@ -38,6 +39,17 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Ask for notification permission (Android 13+) so the rest countdown can show
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
+                != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(
+                    arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1001
+                )
+            }
+        }
+
         setContent {
             val themeMode by org.veilon.gymtracker.ui.UserPreferences
                 .themeMode(applicationContext)

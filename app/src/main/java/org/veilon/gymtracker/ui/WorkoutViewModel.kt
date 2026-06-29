@@ -15,6 +15,7 @@ import org.veilon.gymtracker.data.AppDatabase
 import org.veilon.gymtracker.data.Exercise
 import org.veilon.gymtracker.data.ExerciseLog
 import org.veilon.gymtracker.data.WorkoutSession
+import org.veilon.gymtracker.RestTimerService
 
 class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
 
@@ -107,12 +108,10 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
             val nowComplete = !log.completed
             workoutDao.updateLog(log.copy(completed = nowComplete))
             if (nowComplete) {
-                // Start rest: store the moment it ends
-                UserPreferences.setRestEndsAt(
-                    appContext,
-                    System.currentTimeMillis() + _restDuration.value * 1000L
-                )
+                val endsAt = System.currentTimeMillis() + _restDuration.value * 1000L
+                UserPreferences.setRestEndsAt(appContext, endsAt)
                 _restForExerciseId.value = log.exerciseId
+                RestTimerService.start(appContext, endsAt)
             }
         }
     }
@@ -142,6 +141,7 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
                 workoutDao.updateSession(session.copy(durationSeconds = durationSec))
             }
             UserPreferences.setRestEndsAt(appContext, null)
+            RestTimerService.stop(appContext)
             _restForExerciseId.value = null
             onDone()
         }
@@ -152,6 +152,7 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             workoutDao.deleteSession(WorkoutSession(id = sessionId, name = "", date = 0))
             UserPreferences.setRestEndsAt(appContext, null)
+            RestTimerService.stop(appContext)
             _restForExerciseId.value = null
             onDone()
         }
@@ -160,7 +161,9 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
     fun addRestTime(seconds: Int) {
         viewModelScope.launch {
             val current = restEndsAt.value ?: System.currentTimeMillis()
-            UserPreferences.setRestEndsAt(appContext, current + seconds * 1000L)
+            val newEnd = current + seconds * 1000L
+            UserPreferences.setRestEndsAt(appContext, newEnd)
+            RestTimerService.start(appContext, newEnd)
         }
     }
 
@@ -168,6 +171,7 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             UserPreferences.setRestEndsAt(appContext, null)
             _restForExerciseId.value = null
+            RestTimerService.stop(appContext)
         }
     }
 }
