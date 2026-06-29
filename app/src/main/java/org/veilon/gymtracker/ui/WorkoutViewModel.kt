@@ -3,6 +3,8 @@ package org.veilon.gymtracker.ui
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -16,6 +18,7 @@ import org.veilon.gymtracker.data.Exercise
 import org.veilon.gymtracker.data.ExerciseLog
 import org.veilon.gymtracker.data.WorkoutSession
 import org.veilon.gymtracker.RestTimerService
+import org.veilon.gymtracker.RestAlerts
 
 class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
 
@@ -63,6 +66,9 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
     // Workout start time (epoch millis); elapsed is computed from this, not counted
     private val _startTime = MutableStateFlow<Long?>(null)
     val startTime = _startTime.asStateFlow()
+
+    // In-app rest alert timer (primary path while the app is open)
+    private var restAlertJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -112,6 +118,7 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
                 UserPreferences.setRestEndsAt(appContext, endsAt)
                 _restForExerciseId.value = log.exerciseId
                 RestTimerService.start(appContext, endsAt)
+                startRestAlertTimer(endsAt)
             }
         }
     }
@@ -142,6 +149,7 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
             }
             UserPreferences.setRestEndsAt(appContext, null)
             RestTimerService.stop(appContext)
+            cancelRestAlertTimer()
             _restForExerciseId.value = null
             onDone()
         }
@@ -153,6 +161,7 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
             workoutDao.deleteSession(WorkoutSession(id = sessionId, name = "", date = 0))
             UserPreferences.setRestEndsAt(appContext, null)
             RestTimerService.stop(appContext)
+            cancelRestAlertTimer()
             _restForExerciseId.value = null
             onDone()
         }
@@ -164,6 +173,7 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
             val newEnd = current + seconds * 1000L
             UserPreferences.setRestEndsAt(appContext, newEnd)
             RestTimerService.start(appContext, newEnd)
+            startRestAlertTimer(newEnd)
         }
     }
 
@@ -172,6 +182,38 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
             UserPreferences.setRestEndsAt(appContext, null)
             _restForExerciseId.value = null
             RestTimerService.stop(appContext)
+            cancelRestAlertTimer()
         }
+    }
+
+    // In-app alert timer — primary path while the app is open.
+    // Buzzes at 3-2-1, fires finish alert at zero, then clears rest state
+    // (which signals the alarm backup that it's already handled).
+    private fun startRestAlertTimer(endsAt: Long) {
+        restAlertJob?.cancel()
+        restAlertJob = viewModelScope.launch {
+            val buzzedAt = mutableSetOf<Int>()
+            while (true) {
+                val msLeft = endsAt - System.currentTimeMillis()
+                if (msLeft <= 0) {
+                    RestAlerts.finishAlert(appContext)
+                    UserPreferences.setRestEndsAt(appContext, null)
+                    _restForExerciseId.value = null
+                    RestTimerService.stop(appContext)
+                    break
+                }
+                val secLeft = Math.ceil(msLeft / 1000.0).toInt()
+                if (secLeft in 1..3 && secLeft !in buzzedAt) {
+                    buzzedAt.add(secLeft)
+                    RestAlerts.buzz(appContext)
+                }
+                delay(100)
+            }
+        }
+    }
+
+    private fun cancelRestAlertTimer() {
+        restAlertJob?.cancel()
+        restAlertJob = null
     }
 }

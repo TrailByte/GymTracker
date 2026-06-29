@@ -1,5 +1,6 @@
 package org.veilon.gymtracker
 
+import android.app.AlarmManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -7,18 +8,11 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.media.MediaPlayer
 import android.os.Build
-import android.os.CountDownTimer
 import android.os.IBinder
-import android.os.VibrationEffect
-import android.os.Vibrator
-import android.os.VibratorManager
 import androidx.core.app.NotificationCompat
 
 class RestTimerService : Service() {
-
-    private var timer: CountDownTimer? = null
 
     companion object {
         const val CHANNEL_ID = "rest_timer_channel"
@@ -26,6 +20,9 @@ class RestTimerService : Service() {
         const val EXTRA_ENDS_AT = "ends_at"
         const val ACTION_START = "start_rest"
         const val ACTION_STOP = "stop_rest"
+
+        // Request codes for the four alarms (-3s, -2s, -1s, finish)
+        private val REQ_CODES = intArrayOf(7001, 7002, 7003, 7000)
 
         fun start(context: Context, endsAtMillis: Long) {
             val i = Intent(context, RestTimerService::class.java).apply {
@@ -45,40 +42,67 @@ class RestTimerService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            ACTION_STOP -> { stopSelf(); return START_NOT_STICKY }
+            ACTION_STOP -> {
+                cancelAlarms()
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopSelf()
+                return START_NOT_STICKY
+            }
             ACTION_START -> {
                 val endsAt = intent.getLongExtra(EXTRA_ENDS_AT, 0L)
-                startCountdown(endsAt)
+                createChannel()
+                startForeground(NOTIF_ID, buildNotification(endsAt))
+                scheduleAlarms(endsAt)
             }
         }
         return START_STICKY
     }
 
-    private fun startCountdown(endsAt: Long) {
-        createChannel()
-        val remainingMs = (endsAt - System.currentTimeMillis()).coerceAtLeast(0L)
+    private fun alarmPI(kind: String, reqCode: Int): PendingIntent {
+        val i = Intent(this, RestAlarmReceiver::class.java).apply {
+            putExtra(RestAlarmReceiver.EXTRA_KIND, kind)
+        }
+        return PendingIntent.getBroadcast(
+            this, reqCode, i,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
 
-        // Show the foreground notification with a system-ticked countdown chronometer
-        startForeground(NOTIF_ID, buildNotification(endsAt))
+    private fun scheduleAlarms(endsAt: Long) {
+        val am = getSystemService(AlarmManager::class.java)
+        cancelAlarms()
+        val now = System.currentTimeMillis()
 
-        timer?.cancel()
-        var lastBuzzSecond = -1
-        timer = object : CountDownTimer(remainingMs, 250) {
-            override fun onTick(msLeft: Long) {
-                val secLeft = Math.ceil(msLeft / 1000.0).toInt()
-                // 3-2-1 buildup: single buzz at each of the last 3 seconds
-                if (secLeft in 1..3 && secLeft != lastBuzzSecond) {
-                    lastBuzzSecond = secLeft
-                    vibrate(120)
-                }
+        // Can we schedule exact alarms? (Android 12+ may deny it.)
+        val canExact = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            am.canScheduleExactAlarms()
+        } else true
+
+        fun schedule(triggerAt: Long, pi: PendingIntent) {
+            if (triggerAt <= now) return
+            if (canExact) {
+                am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pi)
+            } else {
+                // Fallback: inexact but still fires in Doze (may be delayed slightly).
+                // The in-app timer is the primary path anyway when the app is open.
+                am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pi)
             }
-            override fun onFinish() {
-                // Finish: sound + double vibration
-                playSound()
-                vibrateDouble()
-                stopSelf()
-            }
-        }.start()
+        }
+
+        // 3-2-1 buzzes
+        schedule(endsAt - 3000, alarmPI(RestAlarmReceiver.KIND_BUZZ, REQ_CODES[0]))
+        schedule(endsAt - 2000, alarmPI(RestAlarmReceiver.KIND_BUZZ, REQ_CODES[1]))
+        schedule(endsAt - 1000, alarmPI(RestAlarmReceiver.KIND_BUZZ, REQ_CODES[2]))
+        // finish
+        schedule(endsAt.coerceAtLeast(now + 1), alarmPI(RestAlarmReceiver.KIND_FINISH, REQ_CODES[3]))
+    }
+
+    private fun cancelAlarms() {
+        val am = getSystemService(AlarmManager::class.java)
+        REQ_CODES.forEachIndexed { idx, code ->
+            val kind = if (idx == 3) RestAlarmReceiver.KIND_FINISH else RestAlarmReceiver.KIND_BUZZ
+            am.cancel(alarmPI(kind, code))
+        }
     }
 
     private fun buildNotification(endsAt: Long): Notification {
@@ -94,11 +118,11 @@ class RestTimerService : Service() {
             .setContentTitle("Rest")
             .setUsesChronometer(true)
             .setChronometerCountDown(true)
-            .setWhen(endsAt)  // chronometer counts down to this moment
+            .setWhen(endsAt)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setContentIntent(pending)
-            .setSilent(true)  // our buzzes/sound are manual; keep the notif itself quiet
+            .setSilent(true)
             .build()
     }
 
@@ -113,37 +137,5 @@ class RestTimerService : Service() {
             }
             mgr.createNotificationChannel(channel)
         }
-    }
-
-    private fun vibrator(): Vibrator {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            (getSystemService(VibratorManager::class.java)).defaultVibrator
-        } else {
-            @Suppress("DEPRECATION")
-            getSystemService(VIBRATOR_SERVICE) as Vibrator
-        }
-    }
-
-    private fun vibrate(ms: Long) {
-        vibrator().vibrate(VibrationEffect.createOneShot(ms, VibrationEffect.DEFAULT_AMPLITUDE))
-    }
-
-    private fun vibrateDouble() {
-        // pattern: wait 0, buzz 200, pause 120, buzz 200
-        val pattern = longArrayOf(0, 200, 120, 200)
-        vibrator().vibrate(VibrationEffect.createWaveform(pattern, -1))
-    }
-
-    private fun playSound() {
-        try {
-            val mp = MediaPlayer.create(this, R.raw.rest_done)
-            mp?.setOnCompletionListener { it.release() }
-            mp?.start()
-        } catch (_: Exception) { /* sound is best-effort */ }
-    }
-
-    override fun onDestroy() {
-        timer?.cancel()
-        super.onDestroy()
     }
 }
