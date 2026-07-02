@@ -78,12 +78,6 @@ fun WorkoutScreen(
             delay(1000)
         }
     }
-    // When rest naturally elapses, clear the "which exercise" marker
-    LaunchedEffect(restRemaining) {
-        if (restRemaining == null && restEndsAt != null) {
-            viewModel.skipRest()
-        }
-    }
 
     if (showExercisePicker) {
         ExercisePickerDialog(
