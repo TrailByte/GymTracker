@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
@@ -15,6 +16,7 @@ import org.veilon.gymtracker.data.AppDatabase
 import org.veilon.gymtracker.data.Exercise
 import org.veilon.gymtracker.data.ExerciseLog
 import org.veilon.gymtracker.data.WorkoutSession
+import org.veilon.gymtracker.data.SessionExerciseOrder
 import org.veilon.gymtracker.RestTimerService
 
 class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
@@ -47,6 +49,27 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "Workout")
 
+    // Explicit exercise order for the current session, combined with a fallback:
+    // exercises with no saved order entry are appended in the order they were
+    // first logged (this is exactly today's behavior) — so old workouts, and any
+    // exercise added before the user has ever dragged to reorder, look unchanged.
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    private val savedOrder: StateFlow<List<SessionExerciseOrder>> = _currentSessionId
+        .flatMapLatest { id ->
+            if (id == null) kotlinx.coroutines.flow.flowOf(emptyList())
+            else workoutDao.getExerciseOrder(id)
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val orderedExerciseIds: StateFlow<List<Long>> = combine(logs, savedOrder) { logsList, orderList ->
+        val loggedIds = logsList.map { it.exerciseId }.distinct()
+        val explicit = orderList.sortedBy { it.orderIndex }
+            .map { it.exerciseId }
+            .filter { it in loggedIds }
+        val missing = loggedIds.filter { it !in explicit }
+        explicit + missing
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     // Rest timer is timestamp-based: store WHEN rest ends; compute remaining live.
     // Lives in DataStore so the mini-bar (different ViewModel) reads the same value
     // and it survives navigation / minimize / backgrounding.
@@ -78,7 +101,16 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun setRestDuration(seconds: Int) {
+    fun saveExerciseOrder(sessionId: Long, orderedIds: List<Long>) {
+        viewModelScope.launch {
+            val entries = orderedIds.mapIndexed { index, exId ->
+                SessionExerciseOrder(sessionId = sessionId, exerciseId = exId, orderIndex = index)
+            }
+            workoutDao.upsertExerciseOrder(entries)
+        }
+    }
+
+        fun setRestDuration(seconds: Int) {
         _restDuration.value = seconds.coerceAtLeast(0)
     }
 

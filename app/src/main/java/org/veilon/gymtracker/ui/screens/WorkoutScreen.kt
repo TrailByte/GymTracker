@@ -3,6 +3,10 @@ package org.veilon.gymtracker.ui.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -273,74 +277,100 @@ fun WorkoutScreen(
                 )
             }
         ) { padding ->
-            LazyColumn(
+            val orderedExerciseIds by viewModel.orderedExerciseIds.collectAsState()
+            var localOrder by remember(orderedExerciseIds) { mutableStateOf(orderedExerciseIds) }
+            val lazyListState = rememberLazyListState()
+            val reorderState = rememberReorderableLazyListState(lazyListState) { from, to ->
+                localOrder = localOrder.toMutableList().apply {
+                    add(to.index, removeAt(from.index))
+                }
+                viewModel.saveExerciseOrder(sessionId, localOrder)
+            }
+            val grouped = logs.groupBy { it.exerciseId }
+
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
                     .imePadding()
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(top = 16.dp, bottom = 96.dp)
             ) {
-            item {
+                // Rest duration button — fixed, not part of the reorderable list
                 TextButton(
                     onClick = { showRestConfig = true },
-                    contentPadding = PaddingValues(0.dp)
+                    contentPadding = PaddingValues(0.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp)
                 ) {
                     Text("Rest: ${restDuration / 60}:${String.format(java.util.Locale.US, "%02d", restDuration % 60)} (tap to change)")
                 }
                 Spacer(Modifier.height(8.dp))
-            }
 
-            val grouped = logs.groupBy { it.exerciseId }
-            val orderedIds = logs.map { it.exerciseId }.distinct()
-            items(orderedIds, key = { it }) { exerciseId ->
-                val exercise = exercises.find { it.id == exerciseId }
-                val sets = grouped[exerciseId] ?: emptyList()
-                if (exercise != null) {
-                    ExerciseSetCard(
-                        exercise = exercise,
-                        sets = sets,
-                        unitLabel = unitLabel,
-                        useLbs = useLbs,
-                        onAddSet = { viewModel.addSet(sessionId, exercise) },
-                        onUpdate = { log, reps, weight -> viewModel.updateSet(log, reps, weight) },
-                        onToggle = { log -> viewModel.toggleComplete(log) },
-                        onDeleteSet = { log -> viewModel.deleteSet(log) },
-                        onDeleteExercise = { exerciseToRemove = exercise }
-                    )
+                // Exercises — the ONLY items in this list, so drag positions stay unambiguous
+                LazyColumn(
+                    state = lazyListState,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(vertical = 4.dp)
+                ) {
+                    items(localOrder, key = { it }) { exerciseId ->
+                        ReorderableItem(reorderState, key = exerciseId) { isDragging ->
+                            val exercise = exercises.find { it.id == exerciseId }
+                            val sets = grouped[exerciseId] ?: emptyList()
+                            if (exercise != null) {
+                                ExerciseSetCard(
+                                    exercise = exercise,
+                                    sets = sets,
+                                    unitLabel = unitLabel,
+                                    useLbs = useLbs,
+                                    onAddSet = { viewModel.addSet(sessionId, exercise) },
+                                    onUpdate = { log, reps, weight -> viewModel.updateSet(log, reps, weight) },
+                                    onToggle = { log -> viewModel.toggleComplete(log) },
+                                    onDeleteSet = { log -> viewModel.deleteSet(log) },
+                                    onDeleteExercise = { exerciseToRemove = exercise },
+                                    dragHandle = {
+                                        IconButton(
+                                            onClick = {},
+                                            modifier = Modifier.draggableHandle()
+                                        ) {
+                                            Icon(Icons.Default.Menu, contentDescription = "Drag to reorder")
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
                 }
-            }
 
-            item {
-                OutlinedButton(
-                    onClick = { showExercisePicker = true },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Default.Add, null, Modifier.size(18.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text("Add Exercise")
-                }
-            }
-            item {
-                Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
+                // Add Exercise / Cancel / Finish — fixed footer, always visible below the list
+                Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                     OutlinedButton(
-                        onClick = { showCancelDialog = true },
-                        modifier = Modifier.weight(1f)
-                    ) { Text("Cancel") }
-                    Button(
-                        onClick = { showFinishDialog = true },
-                        modifier = Modifier.weight(1f),
-                        enabled = logs.isNotEmpty()
-                    ) { Text("Finish") }
+                        onClick = { showExercisePicker = true },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Add, null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Add Exercise")
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = { showCancelDialog = true },
+                            modifier = Modifier.weight(1f)
+                        ) { Text("Cancel") }
+                        Button(
+                            onClick = { showFinishDialog = true },
+                            modifier = Modifier.weight(1f),
+                            enabled = logs.isNotEmpty()
+                        ) { Text("Finish") }
+                    }
                 }
             }
         }
     }
-}
 
 @Composable
 fun ExerciseSetCard(
@@ -352,17 +382,24 @@ fun ExerciseSetCard(
     onUpdate: (ExerciseLog, Int, Double) -> Unit,
     onToggle: (ExerciseLog) -> Unit,
     onDeleteSet: (ExerciseLog) -> Unit,
-    onDeleteExercise: () -> Unit
+    onDeleteExercise: () -> Unit,
+    dragHandle: (@Composable () -> Unit)? = null
 ) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(exercise.name, fontWeight = FontWeight.SemiBold,
-                        maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                    Text(exercise.muscleGroup, style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                    if (dragHandle != null) {
+                        dragHandle()
+                        Spacer(Modifier.width(4.dp))
+                    }
+                    Column {
+                        Text(exercise.name, fontWeight = FontWeight.SemiBold,
+                            maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                        Text(exercise.muscleGroup, style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
                 TextButton(onClick = onDeleteExercise) { Text("Remove") }
             }

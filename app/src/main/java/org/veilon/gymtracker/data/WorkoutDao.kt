@@ -55,4 +55,10 @@ interface WorkoutDao {
 
     @Query("SELECT * FROM exercise_logs WHERE completed = 1")
     suspend fun getAllCompletedLogsOnce(): List<ExerciseLog>
+
+    @Query("SELECT * FROM session_exercise_order WHERE sessionId = :sessionId ORDER BY orderIndex ASC")
+    fun getExerciseOrder(sessionId: Long): Flow<List<SessionExerciseOrder>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertExerciseOrder(entries: List<SessionExerciseOrder>)
 }

@@ -16,9 +16,10 @@ import kotlinx.coroutines.launch
         WorkoutSession::class,
         ExerciseLog::class,
         WorkoutTemplate::class,
-        TemplateExercise::class
+        TemplateExercise::class,
+        SessionExerciseOrder::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -38,6 +39,23 @@ abstract class AppDatabase : RoomDatabase() {
                 addColumnIfMissing(db, "workout_sessions", "durationSeconds", "INTEGER")
                 addColumnIfMissing(db, "exercises", "archived", "INTEGER NOT NULL DEFAULT 0")
                 addColumnIfMissing(db, "exercise_logs", "completed", "INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        // New table for explicit exercise ordering within a workout session.
+        // Nothing to migrate from — it's brand new, so no data copy needed.
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `session_exercise_order` (
+                        `sessionId` INTEGER NOT NULL,
+                        `exerciseId` INTEGER NOT NULL,
+                        `orderIndex` INTEGER NOT NULL,
+                        PRIMARY KEY(`sessionId`, `exerciseId`)
+                    )
+                    """.trimIndent()
+                )
             }
         }
 
@@ -66,7 +84,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "gymtracker.db"
                 )
-                    .addMigrations(MIGRATION_1_2)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                     .addCallback(object : Callback() {
                         override fun onCreate(db: SupportSQLiteDatabase) {
                             super.onCreate(db)
