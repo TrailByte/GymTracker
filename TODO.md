@@ -25,15 +25,20 @@ A running checklist of what's done and what's outstanding. Edit freely.
 - [x] Timer is timestamp-based — correct after minimize / background / app kill
 
 ## Outstanding
-- [ ] **Rest-timer alert (NEEDED)** — when the rest countdown hits zero, the user
-  is usually NOT looking at the screen. Needs at minimum a sound + vibration when
-  rest ends. Right now nothing fires if you've navigated away or backgrounded.
-  - Simplest: play a sound + vibrate when the in-app countdown reaches 0
-    (works while app is foregrounded).
-  - Fuller: a notification that fires even if the app is backgrounded/closed —
-    requires scheduling (WorkManager/AlarmManager or a foreground Service) +
-    POST_NOTIFICATIONS permission (Android 13+). Bigger chunk.
-  - Decision needed: in-app-only sound first, or go straight to notifications?
+- [x] **Rest-timer alert — DONE.** Persistent notification with a system chronometer
+  countdown (shows only during rest), tap opens the workout. At zero: custom sound
+  (res/raw/rest_done.mp3) + double vibration. Final architecture (after a real debugging
+  session): a SINGLE AlarmManager exact alarm scheduled for restEndsAt is the sole
+  alerter (fires reliably foregrounded, minimized, or backgrounded); RestTimerService
+  owns only the foreground notification lifecycle (hardened: START_NOT_STICKY always,
+  idempotent teardown, no zombie restarts); the in-app pill is purely visual, computed
+  from restEndsAt, no timer of its own. Dropped the originally-planned 3-2-1 buzz
+  buildup to keep the alarm surface simple (one alarm, one job). Root cause of the
+  trickiest bug: WorkoutScreen had a leftover LaunchedEffect that called skipRest()
+  when the pill's countdown hit zero, which canceled the alarm a moment before it
+  fired — only reproduced with the workout screen open (not minimized/backgrounded).
+  Removed; the alarm/receiver now owns clearing rest state entirely.
+
 - [ ] **Background timer / notification (future)** — a live workout/rest timer in
   the notification shade while the app is backgrounded, like dedicated timer apps.
   Needs a foreground Service + notifications. Larger feature; only if wanted.
