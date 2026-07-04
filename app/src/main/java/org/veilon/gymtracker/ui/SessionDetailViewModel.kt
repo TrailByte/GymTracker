@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.stateIn
 import org.veilon.gymtracker.data.AppDatabase
 import org.veilon.gymtracker.data.ExerciseLog
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.combine
+import org.veilon.gymtracker.data.SessionExerciseOrder
 
 class SessionDetailViewModel(app: Application) : AndroidViewModel(app) {
 
@@ -33,6 +35,23 @@ class SessionDetailViewModel(app: Application) : AndroidViewModel(app) {
             else workoutDao.getLogsForSession(id)
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    private val savedOrder: StateFlow<List<SessionExerciseOrder>> = _sessionId
+        .flatMapLatest { id ->
+            if (id == null) flowOf(emptyList())
+            else workoutDao.getExerciseOrder(id)
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val orderedExerciseIds: StateFlow<List<Long>> = combine(logs, savedOrder) { logsList, orderList ->
+        val loggedIds = logsList.map { it.exerciseId }.distinct()
+        val explicit = orderList.sortedBy { it.orderIndex }
+            .map { it.exerciseId }
+            .filter { it in loggedIds }
+        val missing = loggedIds.filter { it !in explicit }
+        explicit + missing
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun setSession(sessionId: Long) {
         _sessionId.value = sessionId

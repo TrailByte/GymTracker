@@ -31,6 +31,7 @@ fun SessionDetailScreen(
     LaunchedEffect(sessionId) { viewModel.setSession(sessionId) }
 
     val logs by viewModel.logs.collectAsState()
+    val orderedIds by viewModel.orderedExerciseIds.collectAsState()
     val exercises by viewModel.exercises.collectAsState()
     val useLbs by viewModel.useLbs.collectAsState()
     val sessionName by viewModel.sessionName.collectAsState()
@@ -97,7 +98,7 @@ fun SessionDetailScreen(
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
-            contentPadding = PaddingValues(vertical = 16.dp)
+            contentPadding = PaddingValues(vertical = 16.dp),
         ) {
             item {
                 Spacer(Modifier.height(8.dp))
@@ -112,7 +113,6 @@ fun SessionDetailScreen(
                 }
             } else {
                 val grouped = logs.groupBy { it.exerciseId }
-                val orderedIds = logs.map { it.exerciseId }.distinct()
                 items(orderedIds, key = { it }) { exerciseId ->
                     val exercise = exercises.find { it.id == exerciseId }
                     val sets = grouped[exerciseId] ?: emptyList()

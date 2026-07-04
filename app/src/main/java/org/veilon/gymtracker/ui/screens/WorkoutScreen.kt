@@ -119,11 +119,21 @@ fun WorkoutScreen(
                 }
             )
         } else {
-            LaunchedEffect(Unit) {
-                viewModel.finishWorkout(sessionId, discardIncomplete = false) {
-                    showFinishDialog = false; onFinish()
+            AlertDialog(
+                onDismissRequest = { showFinishDialog = false },
+                title = { Text("Finish workout?") },
+                text = { Text("This will save the workout and end your session.") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        viewModel.finishWorkout(sessionId, discardIncomplete = false) {
+                            showFinishDialog = false; onFinish()
+                        }
+                    }) { Text("Finish") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showFinishDialog = false }) { Text("Keep going") }
                 }
-            }
+            )
         }
     }
 
