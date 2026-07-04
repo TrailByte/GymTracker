@@ -11,12 +11,44 @@ import org.veilon.gymtracker.data.Exercise
 import org.veilon.gymtracker.data.ExerciseLog
 import org.veilon.gymtracker.data.WorkoutSession
 import java.util.Calendar
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import org.veilon.gymtracker.data.ExerciseRecord
 
 class HomeViewModel(app: Application) : AndroidViewModel(app) {
 
     private val workoutDao = AppDatabase.getInstance(app).workoutDao()
     private val templateDao = AppDatabase.getInstance(app).templateDao()
     private val exerciseDao = AppDatabase.getInstance(app).exerciseDao()
+    private val recordDao = AppDatabase.getInstance(app).recordDao()
+
+    init {
+        viewModelScope.launch {
+            if (!UserPreferences.recordsBackfilled(app).first()) {
+                val allLogs = workoutDao.getAllCompletedLogsOnce()
+                val dateBySession = workoutDao.getAllSessions().first().associate { it.id to it.date }
+                allLogs.groupBy { it.exerciseId }.forEach { (exerciseId, exLogs) ->
+                    val maxWeightLog = exLogs.maxByOrNull { it.weight }
+                    val maxVolLog = exLogs.maxByOrNull { it.weight * it.reps }
+                    if (maxWeightLog != null && maxVolLog != null) {
+                        recordDao.upsertRecord(
+                            ExerciseRecord(
+                                exerciseId = exerciseId,
+                                maxWeightKg = maxWeightLog.weight,
+                                maxWeightReps = maxWeightLog.reps,
+                                maxWeightDate = dateBySession[maxWeightLog.sessionId] ?: System.currentTimeMillis(),
+                                maxVolumeKg = maxVolLog.weight * maxVolLog.reps,
+                                maxVolumeWeightKg = maxVolLog.weight,
+                                maxVolumeReps = maxVolLog.reps,
+                                maxVolumeDate = dateBySession[maxVolLog.sessionId] ?: System.currentTimeMillis()
+                            )
+                        )
+                    }
+                }
+                UserPreferences.setRecordsBackfilled(app, true)
+            }
+        }
+    }
 
     val useLbs = UserPreferences.useLbs(app)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
@@ -36,9 +68,10 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
         workoutDao.getAllSessions(),
         workoutDao.getAllCompletedLogs(),
         exerciseDao.getAll(),
-        UserPreferences.weeklyGoal(app)
-    ) { sessions, logs, exercises, goal ->
-        computeStats(sessions, logs, exercises, goal)
+        UserPreferences.weeklyGoal(app),
+        recordDao.getAllRecords()
+    ) { sessions, logs, exercises, goal, records ->
+        computeStats(sessions, logs, exercises, goal, records)
     }.stateIn(
         viewModelScope, SharingStarted.WhileSubscribed(5000),
         HomeStats(0, 0, 0.0, emptyList())
@@ -48,28 +81,30 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
         sessions: List<WorkoutSession>,
         logs: List<ExerciseLog>,
         exercises: List<Exercise>,
-        weeklyGoal: Int
+        weeklyGoal: Int,
+        records: List<ExerciseRecord>
     ): HomeStats {
         val workoutsThisWeek = sessions.count { isThisWeek(it.date) }
         val totalVolume = logs.sumOf { it.weight * it.reps }
         val streak = computeWeekStreak(sessions.map { it.date }, weeklyGoal)
 
-        // PRs: per exercise, best single-set weight and best single-set volume
-        val byExercise = logs.groupBy { it.exerciseId }
-        val prs = byExercise.mapNotNull { (exId, exLogs) ->
-            val exercise = exercises.find { it.id == exId } ?: return@mapNotNull null
-            val maxWeight = exLogs.maxByOrNull { it.weight } ?: return@mapNotNull null
-            val maxVol = exLogs.maxByOrNull { it.weight * it.reps } ?: return@mapNotNull null
+        // PRs now come from the stored records table — O(1) per exercise,
+        // not a scan across every completed set ever logged.
+        val exerciseById = exercises.associateBy { it.id }
+        val prs = records.mapNotNull { record ->
+            val exercise = exerciseById[record.exerciseId] ?: return@mapNotNull null
             ExercisePR(
+                exerciseId = record.exerciseId,
                 exerciseName = exercise.name,
                 muscleGroup = exercise.muscleGroup,
-                maxWeightKg = maxWeight.weight,
-                maxVolumeKg = maxVol.weight * maxVol.reps,
-                maxVolumeReps = maxVol.reps,
-                maxVolumeWeightKg = maxVol.weight
+                maxWeightKg = record.maxWeightKg,
+                maxWeightDate = record.maxWeightDate,
+                maxVolumeKg = record.maxVolumeKg,
+                maxVolumeReps = record.maxVolumeReps,
+                maxVolumeWeightKg = record.maxVolumeWeightKg,
+                maxVolumeDate = record.maxVolumeDate
             )
         }
-            // Most impressive first (by weight); cap to a handful for Home
             .sortedByDescending { it.maxWeightKg }
             .take(5)
 

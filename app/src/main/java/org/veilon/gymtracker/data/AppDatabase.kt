@@ -17,9 +17,10 @@ import kotlinx.coroutines.launch
         ExerciseLog::class,
         WorkoutTemplate::class,
         TemplateExercise::class,
-        SessionExerciseOrder::class
+        SessionExerciseOrder::class,
+        ExerciseRecord::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -27,6 +28,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun exerciseDao(): ExerciseDao
     abstract fun workoutDao(): WorkoutDao
     abstract fun templateDao(): TemplateDao
+    abstract fun recordDao(): RecordDao
 
     companion object {
         @Volatile private var INSTANCE: AppDatabase? = null
@@ -59,6 +61,32 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // New table for all-time per-exercise records (best weight, best volume).
+        // Brand new table, nothing to copy — existing history is backfilled once
+        // in code after the app opens (see HomeViewModel), not here.
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `exercise_records` (
+                        `exerciseId` INTEGER NOT NULL,
+                        `maxWeightKg` REAL NOT NULL,
+                        `maxWeightReps` INTEGER NOT NULL,
+                        `maxWeightDate` INTEGER NOT NULL,
+                        `maxVolumeKg` REAL NOT NULL,
+                        `maxVolumeWeightKg` REAL NOT NULL,
+                        `maxVolumeReps` INTEGER NOT NULL,
+                        `maxVolumeDate` INTEGER NOT NULL,
+                        PRIMARY KEY(`exerciseId`)
+                    )
+                    """.trimIndent()
+                )
+            }
+        }
+
+
+
+
         private fun addColumnIfMissing(
             db: SupportSQLiteDatabase,
             table: String,
@@ -84,7 +112,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "gymtracker.db"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                     .addCallback(object : Callback() {
                         override fun onCreate(db: SupportSQLiteDatabase) {
                             super.onCreate(db)

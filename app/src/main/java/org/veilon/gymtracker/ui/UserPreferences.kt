@@ -17,6 +17,7 @@ object UserPreferences {
     private val REST_SECONDS: Preferences.Key<Int> = intPreferencesKey("rest_seconds")
     private val ACTIVE_SESSION: Preferences.Key<Long> = longPreferencesKey("active_session")
     private val REST_ENDS_AT: Preferences.Key<Long> = longPreferencesKey("rest_ends_at")
+    private val RECORDS_BACKFILLED: Preferences.Key<Boolean> = booleanPreferencesKey("records_backfilled")
     private val WEEKLY_GOAL: Preferences.Key<Int> = intPreferencesKey("weekly_goal")
 
     fun useLbs(context: Context): Flow<Boolean> =
@@ -57,6 +58,13 @@ object UserPreferences {
             if (endsAt == null) prefs.remove(REST_ENDS_AT)
             else prefs[REST_ENDS_AT] = endsAt
         }
+    }
+
+    fun recordsBackfilled(context: Context): Flow<Boolean> =
+        context.dataStore.data.map { prefs -> prefs[RECORDS_BACKFILLED] ?: false }
+
+    suspend fun setRecordsBackfilled(context: Context, done: Boolean) {
+        context.dataStore.edit { prefs -> prefs[RECORDS_BACKFILLED] = done }
     }
 
     fun weeklyGoal(context: Context): Flow<Int> =

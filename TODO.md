@@ -86,7 +86,7 @@ Grouped by size. Order TBD.
   (imePadding + ensure focused field scrolls into view).
 
 ### Medium
-- [ ] #1  Reorder exercises within the workout screen (reuse Reorderable lib;
+- [x] #1  Reorder exercises within the workout screen (reuse Reorderable lib;
   needs an orderIndex on the in-workout exercises — currently order is just
   insertion order of logs).
 - [x] #3  Rest duration picker — replaced steppers with an iPhone-style scroll
@@ -143,3 +143,28 @@ Grouped by size. Order TBD.
   from "explicitly 0". Bodyweight sets should be completable with 0 weight.
 - [x] #19 Move the per-exercise rest timer into the exercise title box; keep it
   visible when the workout is minimized too. (Overlaps with #4 per-exercise timer.)
+
+## Session additions (not from the original numbered list)
+- [x] Reorder exercises in the active workout — DONE. New `session_exercise_order`
+  table (version 3 migration), drag handle on each exercise card, reuses the
+  Reorderable lib pattern from templates. Old workouts with no saved order fall
+  back to "first logged" order (unchanged behavior).
+- [x] Exercise order now respected everywhere, not just the live workout —
+  extended the same saved-order + fallback logic to SessionDetailScreen (the
+  finished-workout view) and the Log screen's history-card exercise list
+  (LogViewModel's per-session stats). Required a new `getAllExerciseOrder()`
+  query since the Log screen computes stats for every session at once.
+- [x] Swapped the Reps/kg column order (kg now before Reps) — in the live workout
+  screen's header + input fields, AND in the finished-workout detail view.
+- [x] Exercise Library: added a search field (filters by name) and muscle-group
+  filter chips (All + one per group), both fixed above the scrolling list, and
+  combine together. Search/filter currently only apply to the ACTIVE list, not
+  the Archived section below — revisit if that's wanted too.
+
+## Known workflow gotcha (noted so it doesn't happen again)
+- When multiple new files are added together with edits to existing files,
+  double-check ALL files (not just edited ones) actually get committed —
+  Android Studio can leave a genuinely NEW file unversioned/unpushed while the
+  edited files go through fine. Bit us once with SessionExerciseOrder.kt
+  (DAO/ViewModel referenced it, but the class file itself was never pushed,
+  so the project silently couldn't have compiled).

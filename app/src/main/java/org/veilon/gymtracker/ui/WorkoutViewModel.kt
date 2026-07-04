@@ -18,11 +18,13 @@ import org.veilon.gymtracker.data.ExerciseLog
 import org.veilon.gymtracker.data.WorkoutSession
 import org.veilon.gymtracker.data.SessionExerciseOrder
 import org.veilon.gymtracker.RestTimerService
+import org.veilon.gymtracker.data.ExerciseRecord
 
 class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
 
     private val workoutDao = AppDatabase.getInstance(app).workoutDao()
     private val exerciseDao = AppDatabase.getInstance(app).exerciseDao()
+    private val recordDao = AppDatabase.getInstance(app).recordDao()
     private val appContext = app.applicationContext
 
     val exercises = exerciseDao.getAll()
@@ -133,6 +135,11 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
     fun updateSet(log: ExerciseLog, reps: Int, weightKg: Double) {
         viewModelScope.launch {
             workoutDao.updateLog(log.copy(reps = reps, weight = weightKg))
+            // If this set was already marked complete, an edited value could
+            // newly set (or raise) a record — check it too, not just on toggle.
+            if (log.completed) {
+                updateRecordIfBetter(log.exerciseId, weightKg, reps)
+            }
         }
     }
 
@@ -141,12 +148,50 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
             val nowComplete = !log.completed
             workoutDao.updateLog(log.copy(completed = nowComplete))
             if (nowComplete) {
+                updateRecordIfBetter(log.exerciseId, log.weight, log.reps)
                 val endsAt = System.currentTimeMillis() + _restDuration.value * 1000L
                 UserPreferences.setRestEndsAt(appContext, endsAt)
                 _restForExerciseId.value = log.exerciseId
                 RestTimerService.start(appContext, endsAt)
             }
         }
+    }
+
+    // Checks a completed set's weight and volume against the stored record for
+    // this exercise, and updates whichever (or both) it newly beats. O(1) —
+    // one read, one write, never a scan.
+    private suspend fun updateRecordIfBetter(exerciseId: Long, weight: Double, reps: Int) {
+        val whenAchieved = System.currentTimeMillis()
+        val existing = recordDao.getRecord(exerciseId)
+        val volume = weight * reps
+
+        var maxWeightKg = existing?.maxWeightKg ?: 0.0
+        var maxWeightReps = existing?.maxWeightReps ?: 0
+        var maxWeightDate = existing?.maxWeightDate ?: whenAchieved
+        if (weight > maxWeightKg) {
+            maxWeightKg = weight; maxWeightReps = reps; maxWeightDate = whenAchieved
+        }
+
+        var maxVolumeKg = existing?.maxVolumeKg ?: 0.0
+        var maxVolumeWeightKg = existing?.maxVolumeWeightKg ?: 0.0
+        var maxVolumeReps = existing?.maxVolumeReps ?: 0
+        var maxVolumeDate = existing?.maxVolumeDate ?: whenAchieved
+        if (volume > maxVolumeKg) {
+            maxVolumeKg = volume; maxVolumeWeightKg = weight; maxVolumeReps = reps; maxVolumeDate = whenAchieved
+        }
+
+        recordDao.upsertRecord(
+            ExerciseRecord(
+                exerciseId = exerciseId,
+                maxWeightKg = maxWeightKg,
+                maxWeightReps = maxWeightReps,
+                maxWeightDate = maxWeightDate,
+                maxVolumeKg = maxVolumeKg,
+                maxVolumeWeightKg = maxVolumeWeightKg,
+                maxVolumeReps = maxVolumeReps,
+                maxVolumeDate = maxVolumeDate
+            )
+        )
     }
 
     fun deleteSet(log: ExerciseLog) {
