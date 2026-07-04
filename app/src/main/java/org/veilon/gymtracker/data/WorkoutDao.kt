@@ -61,4 +61,8 @@ interface WorkoutDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertExerciseOrder(entries: List<SessionExerciseOrder>)
+
+    @Query("SELECT * FROM session_exercise_order")
+    fun getAllExerciseOrder(): Flow<List<SessionExerciseOrder>>
+
 }

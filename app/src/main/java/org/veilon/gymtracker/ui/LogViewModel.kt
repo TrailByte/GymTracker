@@ -36,17 +36,26 @@ class LogViewModel(app: Application) : AndroidViewModel(app) {
         workoutDao.getAllSessions(),
         workoutDao.getAllLogs(),
         exerciseDao.getAllIncludingArchived(),
-        UserPreferences.activeSession(app)
-    ) { sessions, allLogs, exercises, activeId ->
+        UserPreferences.activeSession(app),
+        workoutDao.getAllExerciseOrder()
+    ) { sessions, allLogs, exercises, activeId, allOrder->
         val active = sessions.find { it.id == activeId }
         val history = sessions.filter { it.id != activeId }
 
         val nameById = exercises.associate { it.id to it.name }
         val logsBySession = allLogs.groupBy { it.sessionId }
+        val orderBySession = allOrder.groupBy { it.sessionId }
 
-        val stats = logsBySession.mapValues { (_, logs) ->
-            // Preserve workout order = order exercises first appear in the logs
-            val orderedIds = logs.map { it.exerciseId }.distinct()
+        val stats = logsBySession.mapValues { (sessionId, logs) ->
+            // Use the saved drag-order if one exists; otherwise fall back to the
+            // order exercises were first logged (unchanged behavior for old workouts).
+            val loggedIds = logs.map { it.exerciseId }.distinct()
+            val explicit = orderBySession[sessionId].orEmpty()
+                .sortedBy { it.orderIndex }
+                .map { it.exerciseId }
+                .filter { it in loggedIds }
+            val orderedIds = explicit + loggedIds.filter { it !in explicit }
+
             val lines = orderedIds.map { exId ->
                 ExerciseLine(
                     name = nameById[exId] ?: "Unknown",
