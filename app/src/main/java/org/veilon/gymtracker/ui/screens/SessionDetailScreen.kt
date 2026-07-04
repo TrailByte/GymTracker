@@ -128,9 +128,9 @@ fun SessionDetailScreen(
                                 Row(Modifier.fillMaxWidth()) {
                                     Text("Set ${log.setNumber}", Modifier.weight(1f),
                                         fontFamily = FontFamily.Monospace)
-                                    Text("${log.reps} reps", Modifier.weight(1f),
-                                        fontFamily = FontFamily.Monospace)
                                     Text(formatWeight(log.weight, useLbs), Modifier.weight(1f),
+                                        fontFamily = FontFamily.Monospace)
+                                    Text("${log.reps} reps", Modifier.weight(1f),
                                         fontFamily = FontFamily.Monospace)
                                 }
                             }

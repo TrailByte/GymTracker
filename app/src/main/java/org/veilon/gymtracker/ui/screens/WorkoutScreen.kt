@@ -416,8 +416,8 @@ fun ExerciseSetCard(
             HorizontalDivider()
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text("Set", Modifier.weight(0.6f), style = MaterialTheme.typography.labelMedium)
-                Text("Reps", Modifier.weight(1f), style = MaterialTheme.typography.labelMedium)
                 Text(unitLabel, Modifier.weight(1f), style = MaterialTheme.typography.labelMedium)
+                Text("Reps", Modifier.weight(1f), style = MaterialTheme.typography.labelMedium)
                 Spacer(Modifier.weight(0.6f))
             }
             sets.forEach { log ->
@@ -499,19 +499,6 @@ fun SetRow(
             ) {
                 Text("${log.setNumber}", Modifier.weight(0.6f))
                 OutlinedTextField(
-                    value = repsText,
-                    onValueChange = {
-                        repsText = it.filter { c -> c.isDigit() }
-                        val reps = repsText.toIntOrNull() ?: 0
-                        val kg = toKg(weightText.toDoubleOrNull() ?: 0.0, useLbs)
-                        onUpdate(log, reps, kg)
-                    },
-                    modifier = Modifier.weight(1f).padding(end = 4.dp),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    textStyle = androidx.compose.ui.text.TextStyle(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
-                )
-                OutlinedTextField(
                     value = weightText,
                     onValueChange = {
                         weightText = it.filter { c -> c.isDigit() || c == '.' }
@@ -521,6 +508,19 @@ fun SetRow(
                     },
                     modifier = Modifier.weight(1f).padding(end = 4.dp),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    singleLine = true,
+                    textStyle = androidx.compose.ui.text.TextStyle(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+                )
+                OutlinedTextField(
+                    value = repsText,
+                    onValueChange = {
+                        repsText = it.filter { c -> c.isDigit() }
+                        val reps = repsText.toIntOrNull() ?: 0
+                        val kg = toKg(weightText.toDoubleOrNull() ?: 0.0, useLbs)
+                        onUpdate(log, reps, kg)
+                    },
+                    modifier = Modifier.weight(1f).padding(end = 4.dp),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     textStyle = androidx.compose.ui.text.TextStyle(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
                 )
