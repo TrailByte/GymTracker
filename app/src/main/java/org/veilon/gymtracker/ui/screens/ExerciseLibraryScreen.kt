@@ -18,6 +18,7 @@ import org.veilon.gymtracker.ui.ExerciseLibraryViewModel
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.lazy.LazyRow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -76,87 +77,135 @@ fun ExerciseLibraryScreen(
             )
         }
     ) { padding ->
+        var searchQuery by remember { mutableStateOf("") }
+        var selectedFilter by remember { mutableStateOf("All") }
+
         val active = exercises.filter { !it.archived }
         val archived = exercises.filter { it.archived }
-        val grouped = active.groupBy { it.muscleGroup }
 
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-            contentPadding = PaddingValues(vertical = 16.dp)
-        ) {
-            grouped.forEach { (group, list) ->
+        val byFilter = if (selectedFilter == "All") active
+        else active.filter { it.muscleGroup == selectedFilter }
+        val filtered = if (searchQuery.isBlank()) byFilter
+        else byFilter.filter { it.name.contains(searchQuery, ignoreCase = true) }
+        val grouped = filtered.groupBy { it.muscleGroup }
+
+        Column(Modifier.fillMaxSize().padding(padding)) {
+            // Search — fixed, not part of the scrolling list
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                label = { Text("Search exercises") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+
+            // Muscle-group filter chips — fixed, horizontally scrollable
+            LazyRow(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(vertical = 4.dp)
+            ) {
                 item {
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        shape = MaterialTheme.shapes.small
-                    ) {
-                        Text(
-                            group.uppercase(),
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)
-                        )
+                    FilterChip(
+                        selected = selectedFilter == "All",
+                        onClick = { selectedFilter = "All" },
+                        label = { Text("All") }
+                    )
+                }
+                items(viewModel.muscleGroups) { mg ->
+                    FilterChip(
+                        selected = selectedFilter == mg,
+                        onClick = { selectedFilter = mg },
+                        label = { Text(mg) }
+                    )
+                }
+            }
+
+            LazyColumn(
+                modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+                contentPadding = PaddingValues(vertical = 16.dp)
+            ) {
+                if (grouped.isEmpty()) {
+                    item {
+                        Box(Modifier.fillMaxWidth().padding(top = 32.dp), contentAlignment = Alignment.Center) {
+                            Text("No exercises match.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
                 }
-                items(list, key = { it.id }) { ex ->
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Row(
-                            modifier = Modifier.padding(12.dp).fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                grouped.forEach { (group, list) ->
+                    item {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            shape = MaterialTheme.shapes.small
                         ) {
-                            Text(ex.name, modifier = Modifier.weight(1f))
-                            IconButton(onClick = { editing = ex; showAddEdit = true }) {
-                                Icon(Icons.Default.Edit, contentDescription = "Edit")
-                            }
-                            TextButton(onClick = {
-                                viewModel.removeExercise(
-                                    ex,
-                                    onBlocked = { blockedExercise = ex },
-                                    onDeleted = { }
-                                )
-                            }) {
-                                Text("Remove")
+                            Text(
+                                group.uppercase(),
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)
+                            )
+                        }
+                    }
+                    items(list, key = { it.id }) { ex ->
+                        Card(modifier = Modifier.fillMaxWidth()) {
+                            Row(
+                                modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(ex.name, modifier = Modifier.weight(1f))
+                                IconButton(onClick = { editing = ex; showAddEdit = true }) {
+                                    Icon(Icons.Default.Edit, contentDescription = "Edit")
+                                }
+                                TextButton(onClick = {
+                                    viewModel.removeExercise(
+                                        ex,
+                                        onBlocked = { blockedExercise = ex },
+                                        onDeleted = { }
+                                    )
+                                }) {
+                                    Text("Remove")
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            if (archived.isNotEmpty()) {
-                item {
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        "ARCHIVED",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        "Hidden from pickers, history preserved",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                items(archived, key = { it.id }) { ex ->
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Row(
-                            modifier = Modifier.padding(12.dp).fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(ex.name, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Text(
-                                    ex.muscleGroup,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            TextButton(onClick = { viewModel.restoreExercise(ex) }) {
-                                Text("Restore")
+                if (archived.isNotEmpty()) {
+                    item {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "ARCHIVED",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            "Hidden from pickers, history preserved",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    items(archived, key = { it.id }) { ex ->
+                        Card(modifier = Modifier.fillMaxWidth()) {
+                            Row(
+                                modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(ex.name, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(
+                                        ex.muscleGroup,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                TextButton(onClick = { viewModel.restoreExercise(ex) }) {
+                                    Text("Restore")
+                                }
                             }
                         }
                     }
