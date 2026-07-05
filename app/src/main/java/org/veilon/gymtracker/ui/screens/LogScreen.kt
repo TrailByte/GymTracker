@@ -107,17 +107,36 @@ fun LogScreen(
                             }
 
                             Spacer(Modifier.height(6.dp))
-                            // Footer: duration · volume · PR pill (PR pill comes in #12)
+                            // Footer: duration · volume · PR pill
                             val volText = org.veilon.gymtracker.ui.formatWeight(stats.totalVolumeKg, useLbs)
                             val footer = buildList {
                                 session.durationSeconds?.let { add(formatDuration(it)) }
                                 add("$volText vol")
                             }.joinToString("  ·  ")
-                            Text(
-                                footer,
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    footer,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                if (stats.hasPR) {
+                                    Surface(
+                                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                        shape = MaterialTheme.shapes.small
+                                    ) {
+                                        Text(
+                                            "PR",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }

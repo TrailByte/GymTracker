@@ -152,7 +152,9 @@ fun GymTrackerApp(activeVm: ActiveWorkoutViewModel = viewModel()) {
                     sessionId = sessionId,
                     onFinish = {
                         activeVm.clearActive()
-                        navController.popBackStack()
+                        navController.navigate("session/$sessionId") {
+                            popUpTo("workout/{sessionId}") { inclusive = true }
+                        }
                     },
                     onMinimize = { navController.popBackStack() }
                 )
@@ -214,6 +216,9 @@ fun GymTrackerApp(activeVm: ActiveWorkoutViewModel = viewModel()) {
                             onEdit = { id ->
                         // Edit past workout — feature not built yet. Stub: for now, do nothing
                         // or navigate somewhere safe. Placeholder until the edit feature lands.
+                    },
+                    onOpenExercise = { exerciseId ->
+                        navController.navigate("exercise_history/$exerciseId")
                     },
                 )
             }

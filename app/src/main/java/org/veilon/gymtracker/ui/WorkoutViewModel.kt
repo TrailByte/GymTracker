@@ -223,14 +223,15 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
             val session = workoutDao.getSession(sessionId)
+            var durationSec: Long? = null
             if (session != null) {
-                val durationSec = ((System.currentTimeMillis() - session.date) / 1000).coerceAtLeast(0)
+                durationSec = ((System.currentTimeMillis() - session.date) / 1000).coerceAtLeast(0)
                 workoutDao.updateSession(session.copy(durationSeconds = durationSec))
             }
             UserPreferences.setRestEndsAt(appContext, null)
             RestTimerService.stop(appContext)
             _restForExerciseId.value = null
-            GamificationEngine.onWorkoutFinished(appContext)
+            GamificationEngine.onWorkoutFinished(appContext, session?.name ?: "Workout", durationSec)
             onDone()
         }
     }

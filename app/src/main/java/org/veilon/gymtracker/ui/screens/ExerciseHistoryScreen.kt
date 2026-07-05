@@ -3,6 +3,8 @@ package org.veilon.gymtracker.ui.screens
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,6 +28,19 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 
+private enum class TimeRange(val label: String, val days: Int?) {
+    WEEK("7D", 7),
+    MONTH("30D", 30),
+    YEAR("1Y", 365),
+    ALL("All", null)
+}
+
+private fun filterByRange(points: List<Pair<Long, Double>>, range: TimeRange): List<Pair<Long, Double>> {
+    val days = range.days ?: return points
+    val cutoff = System.currentTimeMillis() - days * 24L * 60 * 60 * 1000
+    return points.filter { it.first >= cutoff }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExerciseHistoryScreen(
@@ -38,6 +53,7 @@ fun ExerciseHistoryScreen(
     val name by viewModel.exerciseName.collectAsState()
     val history by viewModel.history.collectAsState()
     val useLbs by viewModel.useLbs.collectAsState()
+    var selectedRange by remember { mutableStateOf(TimeRange.ALL) }
 
     Scaffold(
         topBar = {
@@ -62,6 +78,18 @@ fun ExerciseHistoryScreen(
                     }
                 }
             } else {
+                item {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(TimeRange.entries.toList()) { range ->
+                            FilterChip(
+                                selected = selectedRange == range,
+                                onClick = { selectedRange = range },
+                                label = { Text(range.label) }
+                            )
+                        }
+                    }
+                }
+
                 val unit = if (useLbs) "lbs" else "kg"
                 item {
                     Text(
@@ -71,7 +99,8 @@ fun ExerciseHistoryScreen(
                         color = MaterialTheme.colorScheme.primary
                     )
                     Spacer(Modifier.height(8.dp))
-                    val points = history.weightPoints.map { (d, v) -> d to (if (useLbs) v * 2.20462 else v) }
+                    val points = filterByRange(history.weightPoints, selectedRange)
+                        .map { (d, v) -> d to (if (useLbs) v * 2.20462 else v) }
                     Card(Modifier.fillMaxWidth()) {
                         SimpleLineChart(points = points, modifier = Modifier.padding(16.dp))
                     }
@@ -84,7 +113,8 @@ fun ExerciseHistoryScreen(
                         color = MaterialTheme.colorScheme.primary
                     )
                     Spacer(Modifier.height(8.dp))
-                    val points = history.volumePoints.map { (d, v) -> d to (if (useLbs) v * 2.20462 else v) }
+                    val points = filterByRange(history.volumePoints, selectedRange)
+                        .map { (d, v) -> d to (if (useLbs) v * 2.20462 else v) }
                     Card(Modifier.fillMaxWidth()) {
                         SimpleLineChart(
                             points = points,
@@ -99,12 +129,10 @@ fun ExerciseHistoryScreen(
 }
 
 /**
- * Minimal DIY line chart — no library, no dependency, just Canvas. Plots
- * (timestamp, value) points on an even time axis and connects them. Kept
- * deliberately uncluttered: no numeric axis, just the line and a date-range
- * caption below (the exact numbers are already shown as PR text elsewhere).
- * Handles 0, 1, and many points without crashing (guards divide-by-zero when
- * every point shares the same date or value).
+ * Minimal DIY line chart — no library, no dependency, just Canvas. Y-axis
+ * always starts at 0 (an honest sense of scale, not auto-zoomed to the data's
+ * own min/max). Plots (timestamp, value) points on an even time axis and
+ * connects them. Handles 0, 1, and many points without crashing.
  */
 @Composable
 private fun SimpleLineChart(
@@ -115,13 +143,13 @@ private fun SimpleLineChart(
 ) {
     if (points.isEmpty()) {
         Box(modifier.fillMaxWidth().height(140.dp), contentAlignment = Alignment.Center) {
-            Text("Not enough data yet", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("No data in this range", color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         return
     }
 
     val dateFmt = remember { SimpleDateFormat("MMM d", Locale.getDefault()) }
-    val minY = points.minOf { it.second }
+    val minY = 0.0
     val maxYraw = points.maxOf { it.second }
     val maxY = if (maxYraw == minY) minY + 1.0 else maxYraw
     val minX = points.first().first
@@ -144,7 +172,7 @@ private fun SimpleLineChart(
         selectedIndex = bestIdx
     }
 
-    val selected = points[selectedIndex]
+    val selected = points[selectedIndex.coerceIn(0, points.size - 1)]
 
     Column(modifier) {
         // The "details" for whichever point is selected — defaults to the latest

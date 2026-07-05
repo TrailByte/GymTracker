@@ -58,8 +58,12 @@ object GamificationEngine {
     /** Call when a workout finishes. Awards workout XP, checks workout-count,
      *  lifetime-volume, and streak-increase achievements, and shows a
      *  celebration for anything newly earned. */
-    suspend fun onWorkoutFinished(context: Context) {
-        val celebrations = mutableListOf<Celebration>()
+    suspend fun onWorkoutFinished(context: Context, sessionName: String, durationSeconds: Long?) {
+        // Always fires, unlike level-up/achievements which are conditional —
+        // finishing a workout deserves acknowledgment every time.
+        val celebrations = mutableListOf<Celebration>(
+            Celebration.WorkoutFinished(sessionName, durationSeconds)
+        )
         var xpToAdd = XP_PER_WORKOUT
 
         val db = AppDatabase.getInstance(context)

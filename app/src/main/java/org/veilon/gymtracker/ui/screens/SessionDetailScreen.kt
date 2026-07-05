@@ -26,6 +26,7 @@ fun SessionDetailScreen(
     onBack: () -> Unit,
     onRepeat: (Long) -> Unit,
     onEdit: (Long) -> Unit,
+    onOpenExercise: (Long) -> Unit,
     viewModel: SessionDetailViewModel = viewModel()
 ) {
     LaunchedEffect(sessionId) { viewModel.setSession(sessionId) }
@@ -35,6 +36,7 @@ fun SessionDetailScreen(
     val exercises by viewModel.exercises.collectAsState()
     val useLbs by viewModel.useLbs.collectAsState()
     val sessionName by viewModel.sessionName.collectAsState()
+    val prInfoByExercise by viewModel.prInfoByExercise.collectAsState()
     var menuExpanded by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
 
@@ -116,13 +118,55 @@ fun SessionDetailScreen(
                 items(orderedIds, key = { it }) { exerciseId ->
                     val exercise = exercises.find { it.id == exerciseId }
                     val sets = grouped[exerciseId] ?: emptyList()
-                    Card(Modifier.fillMaxWidth()) {
+                    val prInfo = prInfoByExercise[exerciseId]
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { onOpenExercise(exerciseId) }
+                    ) {
                         Column(Modifier.padding(16.dp),
                             verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(exercise?.name ?: "Unknown", fontWeight = FontWeight.SemiBold)
-                            Text(exercise?.muscleGroup ?: "",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text(exercise?.name ?: "Unknown", fontWeight = FontWeight.SemiBold)
+                                    Text(exercise?.muscleGroup ?: "",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                if (prInfo != null) {
+                                    Surface(
+                                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                        shape = MaterialTheme.shapes.small
+                                    ) {
+                                        Text(
+                                            "PR",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+                            }
+                            if (prInfo != null) {
+                                val details = buildList {
+                                    if (prInfo.isWeightPr) {
+                                        add("New best set: ${prInfo.record.maxWeightReps}×${formatWeight(prInfo.record.maxWeightKg, useLbs)}")
+                                    }
+                                    if (prInfo.isVolumePr) {
+                                        add("New best volume: ${prInfo.record.maxVolumeReps}×${formatWeight(prInfo.record.maxVolumeWeightKg, useLbs)}")
+                                    }
+                                }
+                                Text(
+                                    details.joinToString("  ·  "),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
                             HorizontalDivider()
                             sets.forEach { log ->
                                 Row(Modifier.fillMaxWidth()) {

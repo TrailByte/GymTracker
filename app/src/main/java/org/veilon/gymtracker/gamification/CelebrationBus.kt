@@ -10,6 +10,11 @@ import org.veilon.gymtracker.ui.theme.ThemeTier
  * as a snackbar would be.
  */
 sealed class Celebration {
+    data class WorkoutFinished(
+        val sessionName: String,
+        val durationSeconds: Long?
+    ) : Celebration()
+
     data class LevelUp(
         val newLevel: Int,
         val prestige: Int,

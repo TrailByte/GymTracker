@@ -60,6 +60,38 @@ fun CelebrationOverlay(celebration: Celebration, onDismiss: () -> Unit) {
                     modifier = Modifier.padding(32.dp)
                 ) {
                     when (celebration) {
+                        is Celebration.WorkoutFinished -> {
+                            Icon(
+                                Icons.Default.EmojiEvents,
+                                contentDescription = null,
+                                modifier = Modifier.size(96.dp),
+                                tint = MaterialTheme.colorScheme.onPrimary
+                            )
+                            Text(
+                                "WORKOUT COMPLETE",
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                textAlign = TextAlign.Center
+                            )
+                            Text(
+                                celebration.sessionName,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                textAlign = TextAlign.Center
+                            )
+                            celebration.durationSeconds?.let { secs ->
+                                val h = secs / 3600
+                                val m = (secs % 3600) / 60
+                                val text = if (h > 0) "${h}h ${m}m" else "${m}m"
+                                Text(
+                                    text,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
                         is Celebration.LevelUp -> {
                             Icon(
                                 Icons.Default.EmojiEvents,

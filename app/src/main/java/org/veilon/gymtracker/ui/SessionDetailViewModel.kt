@@ -13,12 +13,14 @@ import org.veilon.gymtracker.data.AppDatabase
 import org.veilon.gymtracker.data.ExerciseLog
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import org.veilon.gymtracker.data.SessionExerciseOrder
 
 class SessionDetailViewModel(app: Application) : AndroidViewModel(app) {
 
     private val workoutDao = AppDatabase.getInstance(app).workoutDao()
     private val exerciseDao = AppDatabase.getInstance(app).exerciseDao()
+    private val recordDao = AppDatabase.getInstance(app).recordDao()
 
     val exercises = exerciseDao.getAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -52,6 +54,21 @@ class SessionDetailViewModel(app: Application) : AndroidViewModel(app) {
         val missing = loggedIds.filter { it !in explicit }
         explicit + missing
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Which exercises (by id) had their current record set during THIS session
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val prInfoByExercise: StateFlow<Map<Long, ExercisePrInfo>> = _sessionId.flatMapLatest { id ->
+        if (id == null) flowOf(emptyMap())
+        else combine(
+            workoutDao.getLogsForSession(id),
+            recordDao.getAllRecords()
+        ) { sessionLogs, records ->
+            val session = workoutDao.getSession(id)
+            val start = session?.date ?: 0L
+            val end = start + (session?.durationSeconds ?: 0L) * 1000L
+            exercisesPrdInSession(sessionLogs.filter { it.completed }, start, end, records)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     fun setSession(sessionId: Long) {
         _sessionId.value = sessionId
