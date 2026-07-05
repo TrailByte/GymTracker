@@ -216,3 +216,35 @@ Grouped by size. Order TBD.
   ones that silently don't. Recommend explicitly checking the Git panel/`git
   status` shows every new/rewritten file before every commit in this project —
   this has cost real back-and-forth several times now.
+## NEW: Equipment/modality categorization (distinct from #5 "exercise types")
+Two different, easily-confused ideas — keep them separate:
+- **#5 (already parked, unrelated to this)**: HOW a set is tracked — reps+weight vs
+  reps+duration vs hold-only (planks, timed holds). A tracking-input-type concept.
+- **THIS (new)**: WHAT EQUIPMENT an exercise uses — Machine, Cable, Dumbbell,
+  Barbell, Bodyweight, (maybe Smith Machine, Kettlebell, Resistance Band, etc.).
+  A second categorization axis alongside the existing muscleGroup, purely for
+  organizing/filtering the library — doesn't change how sets are logged.
+
+### Scope / open decisions for when we build this
+- [ ] Schema: new field on `Exercise` (e.g. `equipmentType: String`) — needs a
+  migration (new column, defensive addColumnIfMissing pattern like before).
+- [ ] Decide the exact category list up front (Machine / Cable / Dumbbell /
+  Barbell / Bodyweight / others?) — probably a fixed set, similar to how
+  muscleGroup works, not free-text.
+- [ ] Backfill existing 41 seed exercises: many ALREADY hint at equipment in
+  their names via parenthetical suffixes (e.g. "Bicep Curl (Dumbbell)",
+  "Bench Press (Smith)", "Triceps Pushdown (Cable - Rope)") — likely can
+  semi-automate assignment by parsing these rather than doing all 41 by hand.
+  Exercises with no hint (e.g. plain "Squat", "Pull-Up", "Plank") need a
+  manual/sensible-default assignment.
+- [ ] UI: Exercise Library add/edit dialog needs an equipment-type selector
+  (chips, like the existing muscle-group chips).
+- [ ] UI: Library filtering — currently filters by muscle-group chips only
+  (built earlier for search). Decide: add equipment as a SECOND filter row,
+  or a combined filter, or a toggle between "by muscle" / "by equipment" views.
+- [ ] UI: the in-workout exercise picker (sectioned by muscle group currently)
+  — should it also filter/section by equipment? Or leave that picker as-is
+  and only add equipment filtering to the Library screen?
+- [ ] "Populate exercises" — expand the seed catalog further (beyond current
+  41), likely organized/tagged using this new dimension once the category
+  list is decided, so new seeds come in with equipment already assigned.
