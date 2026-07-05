@@ -92,7 +92,9 @@ Grouped by size. Order TBD.
 - [x] #3  Rest duration picker — replaced steppers with an iPhone-style scroll
   wheel (minutes 0-10, seconds in 10s steps). DIY snap-scroll, no dependency.
 - [ ] #6  Remove and edit past workouts (from the Log/SessionDetail screen).
-- [~] #12 (PARKED — see Scale/perf; do with gamification DB) PR pill/badge shown in the Log (workout) screen when a set hits a PR.
+- [~] #12 STILL PARKED for the Log-screen pill specifically, but the stored-PR
+  system it was waiting on is now BUILT (see Stats section below) — wiring the
+  pill itself is now a small follow-up, not a redesign.
 - [x] #13 Workout history card stats: per-exercise sets, total volume, duration.
 - [ ] #9  Scroll lag in the workout screen (THE "stuttery" item — needs profiling;
   likely the inline OutlinedTextFields recomposing, or unstable list keys).
@@ -133,8 +135,10 @@ Grouped by size. Order TBD.
   the exercise violates the constraint. Fix: either block delete / archive when it's
   in a template (like we do for logged history), or add ON DELETE CASCADE/SET behavior
   to template_exercises. Decide which. Schema-touching → migration (we now do migrations).
-- [ ] #16 Keep an exercise's volume PR and show it on the exercise card as a
-  target to beat. (Ties into the stored-PR-per-exercise work parked with gamification.)
+- [x] #16 DONE — exercise_records table stores best weight + best volume per
+  exercise (with dates), updated O(1) on every completed set. Shown on the
+  Stats screen's Records tab; not yet also shown inline in the Exercise Library
+  card itself (that specific placement is a small follow-up if wanted).
 - [x] #17 Log screen: in-progress workout shows BOTH the mini-bar (bottom) AND the
   resume card (top). Redundant — pick one. Likely keep the top resume card on the Log
   screen and suppress the mini-bar while actually on the Log tab (or vice versa).
@@ -168,3 +172,47 @@ Grouped by size. Order TBD.
   edited files go through fine. Bit us once with SessionExerciseOrder.kt
   (DAO/ViewModel referenced it, but the class file itself was never pushed,
   so the project silently couldn't have compiled).
+
+## Stats / Progress screen — built out (major arc, several sessions)
+- [x] **Stored per-exercise PR system** — new `exercise_records` table (best
+  weight + best volume, each with reps and date achieved), updated O(1) on every
+  completed set (WorkoutViewModel.updateRecordIfBetter), one-time backfill from
+  existing history on first launch after the migration. Home's "Recent PRs" now
+  reads from this table instead of live-scanning all completed logs — fixes a
+  pre-existing scale issue as a side effect. version 3->4 migration.
+- [x] **Progress tab rebuilt from placeholder into a real dashboard**, organized
+  as two tabs:
+  - Overview: muscle-group volume (last 30 days), weekly volume (8 weeks),
+    workouts per week (8 weeks) — all DIY bar charts (plain layout, no Canvas,
+    no charting library — avoids the JitPack dependency problem again).
+  - Records: every exercise's PR (best set + best volume, both with reps and
+    date), grouped by muscle group, with filter chips like the Library has.
+    Tap an exercise to open its trend screen.
+- [x] **Per-exercise trend screen** (NEW route `exercise_history/{exerciseId}`):
+  weight-over-time and volume-over-time line charts (per-session best/total),
+  DIY Canvas line chart, INTERACTIVE — tap or drag along the line to inspect
+  any point's date+value (solves readability once there are many records).
+  Uses the documented flatMapLatest+setId pattern (ExerciseHistoryViewModel).
+- [x] "Best set" now shows reps, not just weight (maxWeightReps threaded through
+  ExercisePR) — fixes both Home's PR cards and the Stats screen.
+- [x] Muscle-group volume balance chart (last 30 days) — research-backed addition
+  (Boostcamp/JEFIT pattern for spotting neglected muscle groups).
+- Researched what real 2026 workout-tracking apps (Hevy, Fitbod, JEFIT, Boostcamp)
+  put on their stats screens before building — per-exercise trend graphs (1RM/
+  volume/reps) came up as the most consistently-cited differentiator; muscle-
+  group volume balance was the next most common. Both now built. Estimated 1RM
+  as a tracked/plotted metric is the natural next research-backed addition,
+  intentionally deferred — adds real complexity, worth doing once the above is
+  solid rather than all at once (reviewers explicitly warn against cluttering
+  a stats screen with every possible number).
+
+## Recurring workflow issue (came up multiple times this arc — worth real attention)
+- New files not making it into commits/pushes happened AGAIN, twice more, during
+  this stats build (SessionExerciseOrder.kt earlier; then StatsViewModel.kt +
+  ExerciseHistoryViewModel.kt/ExerciseHistoryScreen.kt + a full ProgressScreen.kt
+  rewrite all failed to push on the first attempt in this same arc). Pattern:
+  edits to EXISTING files reliably show up in Android Studio's changed-files
+  view and get committed; genuinely NEW files and full-file overwrites are the
+  ones that silently don't. Recommend explicitly checking the Git panel/`git
+  status` shows every new/rewritten file before every commit in this project —
+  this has cost real back-and-forth several times now.
