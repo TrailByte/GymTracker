@@ -1,5 +1,8 @@
 package org.veilon.gymtracker.ui.screens
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -20,6 +23,9 @@ import org.veilon.gymtracker.gamification.CelebrationBus
 import org.veilon.gymtracker.ui.SettingsViewModel
 import org.veilon.gymtracker.ui.theme.ScreenTitle
 import org.veilon.gymtracker.ui.theme.ThemeUnlocks
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun SettingsScreen(viewModel: SettingsViewModel = viewModel()) {
@@ -28,6 +34,17 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel()) {
     val weeklyGoal by viewModel.weeklyGoal.collectAsState()
     val selectedTheme by viewModel.selectedTheme.collectAsState()
     val (level, prestige) = viewModel.levelAndPrestige.collectAsState().value
+    val backupStatus by viewModel.backupStatus.collectAsState()
+
+    var showImportWarning by remember { mutableStateOf(false) }
+
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/zip")
+    ) { uri: Uri? -> uri?.let { viewModel.exportBackup(it) } }
+
+    val importLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? -> uri?.let { viewModel.importBackup(it) } }
 
     Column(
         modifier = Modifier
@@ -132,7 +149,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel()) {
                         Text("-15s")
                     }
                     Text(
-                        "${restSeconds / 60}:${String.format(java.util.Locale.US, "%02d", restSeconds % 60)}",
+                        "${restSeconds / 60}:${String.format(Locale.US, "%02d", restSeconds % 60)}",
                         style = MaterialTheme.typography.titleLarge
                     )
                     OutlinedButton(onClick = { viewModel.setRestSeconds(restSeconds + 15) }) {
@@ -162,6 +179,52 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel()) {
                     Text("$weeklyGoal", style = MaterialTheme.typography.titleLarge)
                     OutlinedButton(onClick = { viewModel.setWeeklyGoal(weeklyGoal + 1) }) {
                         Text("+")
+                    }
+                }
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+        SectionLabel("DATA")
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Backup & Restore", fontWeight = FontWeight.SemiBold)
+                Text(
+                    "The app stores everything on this device only. Export a " +
+                        "backup file to move your data to a new phone.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(4.dp))
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            val stamp = SimpleDateFormat("yyyyMMdd", Locale.US).format(Date())
+                            exportLauncher.launch("forj_backup_$stamp.zip")
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) { Text("Export Backup") }
+                    OutlinedButton(
+                        onClick = { showImportWarning = true },
+                        modifier = Modifier.weight(1f)
+                    ) { Text("Import Backup") }
+                }
+                backupStatus?.let { status ->
+                    Spacer(Modifier.height(4.dp))
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            status,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        TextButton(onClick = { viewModel.clearBackupStatus() }) { Text("Dismiss") }
                     }
                 }
             }
@@ -208,6 +271,30 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel()) {
         }
 
         Spacer(Modifier.height(24.dp))
+    }
+
+    if (showImportWarning) {
+        AlertDialog(
+            onDismissRequest = { showImportWarning = false },
+            title = { Text("Replace all current data?") },
+            text = {
+                Text(
+                    "Importing a backup replaces every workout, exercise, and " +
+                        "achievement currently on this device with what's in the " +
+                        "backup file. This can't be undone. After importing, " +
+                        "you'll need to close and reopen the app."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showImportWarning = false
+                    importLauncher.launch(arrayOf("application/zip", "application/octet-stream", "*/*"))
+                }) { Text("Replace Data") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showImportWarning = false }) { Text("Cancel") }
+            }
+        )
     }
 }
 

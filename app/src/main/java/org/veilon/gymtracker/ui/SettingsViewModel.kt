@@ -1,12 +1,17 @@
 package org.veilon.gymtracker.ui
 
 import android.app.Application
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import org.veilon.gymtracker.data.BackupManager
 import org.veilon.gymtracker.gamification.GamificationEngine
 
 class SettingsViewModel(app: Application) : AndroidViewModel(app) {
@@ -49,4 +54,34 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
         UserPreferences.prestigeLevel(app)
     ) { xp, prestige -> GamificationEngine.levelForXp(xp) to prestige }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 1 to 0)
+
+    // Backup / restore
+    private val _backupStatus = MutableStateFlow<String?>(null)
+    val backupStatus: StateFlow<String?> = _backupStatus.asStateFlow()
+
+    fun exportBackup(uri: Uri) {
+        viewModelScope.launch {
+            val success = BackupManager.exportBackup(appContext, uri)
+            _backupStatus.value = if (success) {
+                "Backup saved."
+            } else {
+                "Backup failed — please try again."
+            }
+        }
+    }
+
+    fun importBackup(uri: Uri) {
+        viewModelScope.launch {
+            val success = BackupManager.importBackup(appContext, uri)
+            _backupStatus.value = if (success) {
+                "Import complete. Please close and reopen the app now."
+            } else {
+                "Import failed — the file may not be a valid backup."
+            }
+        }
+    }
+
+    fun clearBackupStatus() {
+        _backupStatus.value = null
+    }
 }
