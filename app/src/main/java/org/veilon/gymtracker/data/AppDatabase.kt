@@ -35,6 +35,16 @@ abstract class AppDatabase : RoomDatabase() {
     companion object {
         @Volatile private var INSTANCE: AppDatabase? = null
 
+        // Needed for backup restore: the live connection must be closed before
+        // its underlying file is overwritten, or every ViewModel holding an
+        // old DAO reference would be querying a closed database. The next
+        // getInstance() call after this rebuilds fresh from whatever file
+        // exists on disk at that point.
+        fun closeInstance() {
+            INSTANCE?.close()
+            INSTANCE = null
+        }
+
         // Defensive 1->2 migration. Because the DB version was never bumped while
         // columns were added during dev, different "version 1" databases exist.
         // We add each column only if it's actually missing.
