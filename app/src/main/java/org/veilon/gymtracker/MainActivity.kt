@@ -51,13 +51,10 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            val themeMode by org.veilon.gymtracker.ui.UserPreferences
-                .themeMode(applicationContext)
-                .collectAsState(initial = "system")
             val selectedTheme by org.veilon.gymtracker.ui.UserPreferences
                 .selectedTheme(applicationContext)
                 .collectAsState(initial = "default")
-            GymTrackerTheme(themeMode = themeMode, themeId = selectedTheme) {
+            GymTrackerTheme(themeId = selectedTheme) {
                 GymTrackerApp()
             }
         }
@@ -113,8 +110,7 @@ fun GymTrackerApp(activeVm: ActiveWorkoutViewModel = viewModel()) {
                                 label = { Text(screen.label) },
                                 colors = NavigationBarItemDefaults.colors(
                                     selectedIconColor = MaterialTheme.colorScheme.primary,
-                                    selectedTextColor = MaterialTheme.colorScheme.primary,
-                                    indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                                    selectedTextColor = MaterialTheme.colorScheme.primary
                                 )
                             )
                         }

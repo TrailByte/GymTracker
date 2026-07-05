@@ -1,6 +1,12 @@
 package org.veilon.gymtracker.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -8,20 +14,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import org.veilon.gymtracker.gamification.Achievements
+import org.veilon.gymtracker.gamification.Celebration
+import org.veilon.gymtracker.gamification.CelebrationBus
 import org.veilon.gymtracker.ui.SettingsViewModel
 import org.veilon.gymtracker.ui.theme.ScreenTitle
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Lock
+import org.veilon.gymtracker.ui.theme.ThemeUnlocks
 
 @Composable
 fun SettingsScreen(viewModel: SettingsViewModel = viewModel()) {
     val useLbs by viewModel.useLbs.collectAsState()
     val restSeconds by viewModel.restSeconds.collectAsState()
     val weeklyGoal by viewModel.weeklyGoal.collectAsState()
-    val themeMode by viewModel.themeMode.collectAsState()
     val selectedTheme by viewModel.selectedTheme.collectAsState()
     val (level, prestige) = viewModel.levelAndPrestige.collectAsState().value
 
@@ -30,27 +34,12 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel()) {
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         ScreenTitle("Settings")
+        Spacer(Modifier.height(4.dp))
 
-        Card(Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp)) {
-                Text("Appearance", fontWeight = FontWeight.SemiBold)
-                Spacer(Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf("system" to "System", "light" to "Light", "dark" to "Dark")
-                        .forEach { (value, label) ->
-                            FilterChip(
-                                selected = themeMode == value,
-                                onClick = { viewModel.setThemeMode(value) },
-                                label = { Text(label) }
-                            )
-                        }
-                }
-            }
-        }
-
+        SectionLabel("APPEARANCE")
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp)) {
                 Text("Theme", fontWeight = FontWeight.SemiBold)
@@ -60,8 +49,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel()) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(Modifier.height(12.dp))
-                val allTiers = org.veilon.gymtracker.ui.theme.ThemeUnlocks.LADDER +
-                        org.veilon.gymtracker.ui.theme.ThemeUnlocks.PRESTIGE_THEME
+                val allTiers = ThemeUnlocks.LADDER + ThemeUnlocks.PRESTIGE_THEME
                 allTiers.forEachIndexed { index, tier ->
                     val isUnlocked = if (tier.id == "prestige") prestige > 0 else level >= tier.unlockLevel
                     val isSelected = selectedTheme == tier.id
@@ -78,7 +66,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel()) {
                                 tier.displayName,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                                 color = if (isUnlocked) MaterialTheme.colorScheme.onSurface
-                                else MaterialTheme.colorScheme.onSurfaceVariant
+                                        else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             if (!isUnlocked) {
                                 Text(
@@ -90,17 +78,9 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel()) {
                             }
                         }
                         if (isSelected) {
-                            Icon(
-                                androidx.compose.material.icons.Icons.Default.Check,
-                                contentDescription = "Selected",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
+                            Icon(Icons.Default.Check, contentDescription = "Selected", tint = MaterialTheme.colorScheme.primary)
                         } else if (!isUnlocked) {
-                            Icon(
-                                androidx.compose.material.icons.Icons.Default.Lock,
-                                contentDescription = "Locked",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Icon(Icons.Default.Lock, contentDescription = "Locked", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                     if (index != allTiers.lastIndex) {
@@ -110,6 +90,8 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel()) {
             }
         }
 
+        Spacer(Modifier.height(16.dp))
+        SectionLabel("WORKOUT")
         Card(Modifier.fillMaxWidth()) {
             Row(
                 Modifier.padding(16.dp).fillMaxWidth(),
@@ -118,9 +100,11 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel()) {
             ) {
                 Column {
                     Text("Weight unit", fontWeight = FontWeight.SemiBold)
-                    Text(if (useLbs) "Pounds (lbs)" else "Kilograms (kg)",
+                    Text(
+                        if (useLbs) "Pounds (lbs)" else "Kilograms (kg)",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("kg")
@@ -133,9 +117,11 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel()) {
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp)) {
                 Text("Default rest timer", fontWeight = FontWeight.SemiBold)
-                Text("New workouts start with this rest duration",
+                Text(
+                    "New workouts start with this rest duration",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 Spacer(Modifier.height(12.dp))
                 Row(
                     Modifier.fillMaxWidth(),
@@ -159,9 +145,11 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel()) {
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp)) {
                 Text("Weekly goal", fontWeight = FontWeight.SemiBold)
-                Text("Workouts per week to keep your streak",
+                Text(
+                    "Workouts per week to keep your streak",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 Spacer(Modifier.height(12.dp))
                 Row(
                     Modifier.fillMaxWidth(),
@@ -179,12 +167,8 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel()) {
             }
         }
 
-        Spacer(Modifier.height(24.dp))
-        Text(
-            "DEBUG",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        Spacer(Modifier.height(16.dp))
+        SectionLabel("DEBUG")
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Test celebration overlay", fontWeight = FontWeight.SemiBold)
@@ -199,12 +183,12 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel()) {
                 ) {
                     OutlinedButton(
                         onClick = {
-                            org.veilon.gymtracker.gamification.CelebrationBus.push(
+                            CelebrationBus.push(
                                 listOf(
-                                    org.veilon.gymtracker.gamification.Celebration.LevelUp(
+                                    Celebration.LevelUp(
                                         newLevel = 5,
                                         prestige = 0,
-                                        newTheme = org.veilon.gymtracker.ui.theme.ThemeUnlocks.themeUnlockedAtLevel(5)
+                                        newTheme = ThemeUnlocks.themeUnlockedAtLevel(5)
                                     )
                                 )
                             )
@@ -213,12 +197,8 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel()) {
                     ) { Text("Preview Level Up") }
                     OutlinedButton(
                         onClick = {
-                            org.veilon.gymtracker.gamification.CelebrationBus.push(
-                                listOf(
-                                    org.veilon.gymtracker.gamification.Celebration.AchievementUnlocked(
-                                        org.veilon.gymtracker.gamification.Achievements.ALL.first()
-                                    )
-                                )
+                            CelebrationBus.push(
+                                listOf(Celebration.AchievementUnlocked(Achievements.ALL.first()))
                             )
                         },
                         modifier = Modifier.weight(1f)
@@ -226,5 +206,18 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel()) {
                 }
             }
         }
+
+        Spacer(Modifier.height(24.dp))
     }
+}
+
+@Composable
+private fun SectionLabel(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.labelMedium,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(bottom = 4.dp)
+    )
 }

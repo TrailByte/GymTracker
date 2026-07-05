@@ -36,13 +36,6 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { UserPreferences.setWeeklyGoal(appContext, value) }
     }
 
-    val themeMode = UserPreferences.themeMode(app)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "system")
-
-    fun setThemeMode(mode: String) {
-        viewModelScope.launch { UserPreferences.setThemeMode(appContext, mode) }
-    }
-
     val selectedTheme = UserPreferences.selectedTheme(app)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "default")
 

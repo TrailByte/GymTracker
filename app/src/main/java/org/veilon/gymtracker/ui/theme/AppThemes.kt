@@ -2,16 +2,12 @@ package org.veilon.gymtracker.ui.theme
 
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 
-// Each tier mirrors Iron & Chalk's structure, with one correction verified by
-// actual WCAG contrast math (not eyeballing): these accent hues are all
-// noticeably LIGHTER than Iron itself, so light text on them measured as low
-// as 1.5:1 contrast — objectively hard to read, in BOTH dark and light mode.
-// Dark text on the accent measures 5.8-10.8:1 across the board. So onPrimary,
-// onError, and (in light mode) onSecondary all use each theme's own dark
-// background color as text, not a light one.
+// Dark-only: light mode was removed for these tiers. onPrimary/onError/
+// onSecondary all use dark text — verified by actual WCAG contrast math,
+// since these accent hues are noticeably lighter than Iron, and light text
+// on them measured as low as 1.5:1 (objectively hard to read).
 
 // --- Bronze (Level 5) ---
 private val BronzeAccent = Color(0xFFF2814A)
@@ -20,9 +16,7 @@ private val BronzeDarkBg = Color(0xFF201E1C)
 private val BronzeDarkSurface = Color(0xFF2B2926)
 private val BronzeDarkSurfaceLight = Color(0xFF363330)
 private val BronzeLightBg = Color(0xFFFAF7F4)
-private val BronzeLightSurfaceDim = Color(0xFFEDE7E1)
 private val BronzeMutedDark = Color(0xFFA39D96)
-private val BronzeMutedLight = Color(0xFF8C8681)
 private val BronzeSuccess = Color(0xFF7FAA5C)
 
 val BronzeDarkColors: ColorScheme = darkColorScheme(
@@ -42,9 +36,7 @@ private val SteelDarkBg = Color(0xFF1C2024)
 private val SteelDarkSurface = Color(0xFF272C30)
 private val SteelDarkSurfaceLight = Color(0xFF30363B)
 private val SteelLightBg = Color(0xFFEEF3F6)
-private val SteelLightSurfaceDim = Color(0xFFDDE5E9)
 private val SteelMutedDark = Color(0xFF8FA0AC)
-private val SteelMutedLight = Color(0xFF7C8E9A)
 private val SteelSuccess = Color(0xFF56B399)
 
 val SteelDarkColors: ColorScheme = darkColorScheme(
@@ -64,15 +56,11 @@ private val GoldDarkBg = Color(0xFF1F1F1D)
 private val GoldDarkSurface = Color(0xFF2A2A26)
 private val GoldDarkSurfaceLight = Color(0xFF34342F)
 private val GoldLightBg = Color(0xFFFAF6EA)
-private val GoldLightSurfaceDim = Color(0xFFEDE6D0)
 private val GoldMutedDark = Color(0xFFB3A57E)
-private val GoldMutedLight = Color(0xFF9C8E68)
 private val GoldSuccess = Color(0xFF8FC24E)
 
 val GoldDarkColors: ColorScheme = darkColorScheme(
     primary = GoldAccent, onPrimary = GoldDarkBg,
-    // Gold's AccentDark container also measured below 3:1 with light text —
-    // dark text here too, unlike Bronze/Steel/Obsidian's containers.
     primaryContainer = GoldAccentDark, onPrimaryContainer = GoldDarkBg,
     secondary = GoldSuccess, onSecondary = GoldDarkBg,
     background = GoldDarkBg, onBackground = GoldLightBg,
@@ -88,9 +76,7 @@ private val ObsidianDarkBg = Color(0xFF242229)
 private val ObsidianDarkSurface = Color(0xFF2F2D36)
 private val ObsidianDarkSurfaceLight = Color(0xFF3A3742)
 private val ObsidianLightBg = Color(0xFFF1EEF7)
-private val ObsidianLightSurfaceDim = Color(0xFFE2DCEF)
 private val ObsidianMutedDark = Color(0xFFA79FBD)
-private val ObsidianMutedLight = Color(0xFF8E85A3)
 private val ObsidianSuccess = Color(0xFF6FCF97)
 
 val ObsidianDarkColors: ColorScheme = darkColorScheme(
@@ -110,14 +96,11 @@ private val PrestigeDarkBg = Color(0xFF201E1A)
 private val PrestigeDarkSurface = Color(0xFF2B2925)
 private val PrestigeDarkSurfaceLight = Color(0xFF35322D)
 private val PrestigeLightBg = Color(0xFFFBF6E8)
-private val PrestigeLightSurfaceDim = Color(0xFFF0E7C8)
 private val PrestigeMutedDark = Color(0xFFC4AC7A)
-private val PrestigeMutedLight = Color(0xFFA88F5C)
 private val PrestigeSuccess = Color(0xFF7FC25C)
 
 val PrestigeDarkColors: ColorScheme = darkColorScheme(
     primary = PrestigeAccent, onPrimary = PrestigeDarkBg,
-    // Same as Gold: AccentDark container also fails with light text here.
     primaryContainer = PrestigeAccentDark, onPrimaryContainer = PrestigeDarkBg,
     secondary = PrestigeSuccess, onSecondary = PrestigeDarkBg,
     background = PrestigeDarkBg, onBackground = PrestigeLightBg,

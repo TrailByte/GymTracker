@@ -1,9 +1,7 @@
 package org.veilon.gymtracker.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 
 private val DarkColors = darkColorScheme(
@@ -23,56 +21,20 @@ private val DarkColors = darkColorScheme(
     onError = Chalk
 )
 
-private val LightColors = lightColorScheme(
-    primary = Iron,
-    onPrimary = Chalk,
-    primaryContainer = ChalkDim,
-    onPrimaryContainer = Charcoal,
-    secondary = Plate,
-    onSecondary = Chalk,
-    background = Chalk,
-    onBackground = Charcoal,
-    surface = ChalkDim,
-    onSurface = Charcoal,
-    surfaceVariant = ChalkDim,
-    onSurfaceVariant = SlateDark,
-    error = Iron,
-    onError = Chalk
-)
-
 @Composable
 fun GymTrackerTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    content: @Composable () -> Unit
-) {
-    MaterialTheme(
-        colorScheme = if (darkTheme) DarkColors else LightColors,
-        typography = GymTypography,
-        content = content
-    )
-}
-
-@Composable
-fun GymTrackerTheme(
-    themeMode: String = "system",
     themeId: String = "default",
     content: @Composable () -> Unit
 ) {
-    val darkTheme = when (themeMode) {
-        "light" -> false
-        "dark" -> true
-        else -> isSystemInDarkTheme()
-    }
-    // Only the default (Iron & Chalk) theme has a light variant and respects
-    // the light/dark/system setting. Every unlockable tier is dark-only.
+    // Light theme has been removed entirely — every theme, including the
+    // default, is dark-only now.
     val colorScheme = when (themeId) {
-        "default" -> if (darkTheme) DarkColors else LightColors
         "bronze" -> BronzeDarkColors
         "steel" -> SteelDarkColors
         "gold" -> GoldDarkColors
         "obsidian" -> ObsidianDarkColors
         "prestige" -> PrestigeDarkColors
-        else -> if (darkTheme) DarkColors else LightColors
+        else -> DarkColors
     }
     MaterialTheme(
         colorScheme = colorScheme,
