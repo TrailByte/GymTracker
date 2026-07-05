@@ -23,6 +23,7 @@ object UserPreferences {
     private val TOTAL_PR_COUNT: Preferences.Key<Long> = longPreferencesKey("total_pr_count")
     private val LAST_KNOWN_STREAK: Preferences.Key<Int> = intPreferencesKey("last_known_streak")
     private val GAMIFICATION_BACKFILLED: Preferences.Key<Boolean> = booleanPreferencesKey("gamification_backfilled")
+    private val GAMIFICATION_BACKFILL_VERSION: Preferences.Key<Int> = intPreferencesKey("gamification_backfill_version")
     private val WEEKLY_GOAL: Preferences.Key<Int> = intPreferencesKey("weekly_goal")
 
     fun useLbs(context: Context): Flow<Boolean> =
@@ -105,6 +106,13 @@ object UserPreferences {
 
     suspend fun setGamificationBackfilled(context: Context, done: Boolean) {
         context.dataStore.edit { prefs -> prefs[GAMIFICATION_BACKFILLED] = done }
+    }
+
+    fun gamificationBackfillVersion(context: Context): Flow<Int> =
+        context.dataStore.data.map { prefs -> prefs[GAMIFICATION_BACKFILL_VERSION] ?: 0 }
+
+    suspend fun setGamificationBackfillVersion(context: Context, version: Int) {
+        context.dataStore.edit { prefs -> prefs[GAMIFICATION_BACKFILL_VERSION] = version }
     }
 
     fun weeklyGoal(context: Context): Flow<Int> =

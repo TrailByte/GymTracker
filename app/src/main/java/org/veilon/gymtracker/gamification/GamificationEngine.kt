@@ -88,8 +88,13 @@ object GamificationEngine {
      *  events, and (b) retroactively unlock any achievement already earned
      *  before this feature existed (e.g. someone with 40 logged workouts
      *  should immediately have "10 Workouts" unlocked, not wait for #41). */
+    // Bump this any time backfill logic changes materially — it forces every
+    // installed phone to re-run the (corrected) calculation once, automatically.
+    private const val CURRENT_BACKFILL_VERSION = 3
+
     suspend fun backfillIfNeeded(context: Context) {
-        if (UserPreferences.gamificationBackfilled(context).first()) return
+        val doneVersion = UserPreferences.gamificationBackfillVersion(context).first()
+        if (doneVersion >= CURRENT_BACKFILL_VERSION) return
 
         val db = AppDatabase.getInstance(context)
         val sessions = db.workoutDao().getAllSessions().first()
@@ -112,19 +117,25 @@ object GamificationEngine {
         UserPreferences.setTotalPrCount(context, totalPrEvents)
         checkThresholdAchievements(context, AchievementType.PR_COUNT, totalPrEvents)
 
-        // Retroactive credit for workout count and lifetime volume
         checkThresholdAchievements(context, AchievementType.WORKOUT_COUNT, sessions.size.toLong())
         val totalVolume = allLogs.sumOf { it.weight * it.reps }
         checkThresholdAchievements(context, AchievementType.LIFETIME_VOLUME_KG, totalVolume.toLong())
 
-        // Seed the streak baseline so the NEXT workout compares against where
-        // things actually stand, not zero.
         val weeklyGoal = UserPreferences.weeklyGoal(context).first()
         val currentStreak = computeWeekStreak(sessions.map { it.date }, weeklyGoal)
         checkThresholdAchievements(context, AchievementType.STREAK_WEEKS, currentStreak.toLong())
         UserPreferences.setLastKnownStreak(context, currentStreak)
 
-        UserPreferences.setGamificationBackfilled(context, true)
+        // THE FIX: actually award the XP this history represents. This is an
+        // absolute recompute-and-SET (not an incremental add), which is what
+        // makes it safe to bump CURRENT_BACKFILL_VERSION again in the future
+        // without worrying about double-counting whatever's already stored.
+        val recomputedXp = sessions.size * XP_PER_WORKOUT +
+                totalPrEvents * XP_PER_PR +
+                currentStreak * XP_PER_STREAK_WEEK
+        UserPreferences.setTotalXp(context, recomputedXp)
+
+        UserPreferences.setGamificationBackfillVersion(context, CURRENT_BACKFILL_VERSION)
     }
 
     // --- Internals ---

@@ -25,6 +25,7 @@ import org.veilon.gymtracker.ui.theme.ScreenTitle
 fun ProfileScreen(
     onOpenSettings: () -> Unit,
     onOpenLibrary: () -> Unit,
+    onOpenAchievements: () -> Unit,
     viewModel: ProfileViewModel = viewModel()
 ) {
     val stats by viewModel.profileStats.collectAsState()
@@ -35,7 +36,7 @@ fun ProfileScreen(
     ) {
         ScreenTitle("Profile")
 
-        Card(Modifier.fillMaxWidth()) {
+        Card(onClick = onOpenAchievements, modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,

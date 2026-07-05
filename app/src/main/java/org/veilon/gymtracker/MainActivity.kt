@@ -172,8 +172,12 @@ fun GymTrackerApp(activeVm: ActiveWorkoutViewModel = viewModel()) {
             composable(Screen.Profile.route) {
                 ProfileScreen(
                     onOpenSettings = { navController.navigate("settings") },
-                    onOpenLibrary = { navController.navigate("library") }
+                    onOpenLibrary = { navController.navigate("library") },
+                    onOpenAchievements = { navController.navigate("achievements") }
                 )
+            }
+            composable("achievements") {
+                AchievementsScreen(onBack = { navController.popBackStack() })
             }
             composable("settings") {
                 SettingsScreen()
