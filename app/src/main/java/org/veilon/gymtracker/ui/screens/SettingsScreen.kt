@@ -11,6 +11,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import org.veilon.gymtracker.ui.SettingsViewModel
 import org.veilon.gymtracker.ui.theme.ScreenTitle
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Lock
 
@@ -24,7 +26,10 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel()) {
     val (level, prestige) = viewModel.levelAndPrestige.collectAsState().value
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         ScreenTitle("Settings")

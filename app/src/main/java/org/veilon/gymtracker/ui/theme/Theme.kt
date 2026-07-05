@@ -52,15 +52,6 @@ fun GymTrackerTheme(
     )
 }
 
-private val ThemeSchemes: Map<String, Pair<androidx.compose.material3.ColorScheme, androidx.compose.material3.ColorScheme>> = mapOf(
-    "default" to (DarkColors to LightColors),
-    "bronze" to (BronzeDarkColors to BronzeLightColors),
-    "steel" to (SteelDarkColors to SteelLightColors),
-    "gold" to (GoldDarkColors to GoldLightColors),
-    "obsidian" to (ObsidianDarkColors to ObsidianLightColors),
-    "prestige" to (PrestigeDarkColors to PrestigeLightColors)
-)
-
 @Composable
 fun GymTrackerTheme(
     themeMode: String = "system",
@@ -72,12 +63,19 @@ fun GymTrackerTheme(
         "dark" -> true
         else -> isSystemInDarkTheme()
     }
-    // Falls back to the default palette if themeId is somehow unrecognized —
-    // e.g. an old stored value, or (shouldn't happen, but defensively) a
-    // locked tier ID that slipped through.
-    val (dark, light) = ThemeSchemes[themeId] ?: (DarkColors to LightColors)
+    // Only the default (Iron & Chalk) theme has a light variant and respects
+    // the light/dark/system setting. Every unlockable tier is dark-only.
+    val colorScheme = when (themeId) {
+        "default" -> if (darkTheme) DarkColors else LightColors
+        "bronze" -> BronzeDarkColors
+        "steel" -> SteelDarkColors
+        "gold" -> GoldDarkColors
+        "obsidian" -> ObsidianDarkColors
+        "prestige" -> PrestigeDarkColors
+        else -> if (darkTheme) DarkColors else LightColors
+    }
     MaterialTheme(
-        colorScheme = if (darkTheme) dark else light,
+        colorScheme = colorScheme,
         typography = GymTypography,
         content = content
     )

@@ -5,12 +5,13 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 
-// Each tier mirrors Iron & Chalk's exact role pattern:
-// - primary/error stay the SAME vibrant accent in both dark and light mode
-// - primaryContainer differs: the "Dark" accent variant in dark mode, a
-//   neutral light surface in light mode (never the accent itself)
-// - background/surface always neutral-toned, never muddy/warm — that was
-//   the whole point of the brown-tone revision
+// Each tier mirrors Iron & Chalk's structure, with one correction verified by
+// actual WCAG contrast math (not eyeballing): these accent hues are all
+// noticeably LIGHTER than Iron itself, so light text on them measured as low
+// as 1.5:1 contrast — objectively hard to read, in BOTH dark and light mode.
+// Dark text on the accent measures 5.8-10.8:1 across the board. So onPrimary,
+// onError, and (in light mode) onSecondary all use each theme's own dark
+// background color as text, not a light one.
 
 // --- Bronze (Level 5) ---
 private val BronzeAccent = Color(0xFFF2814A)
@@ -25,22 +26,13 @@ private val BronzeMutedLight = Color(0xFF8C8681)
 private val BronzeSuccess = Color(0xFF7FAA5C)
 
 val BronzeDarkColors: ColorScheme = darkColorScheme(
-    primary = BronzeAccent, onPrimary = BronzeLightBg,
+    primary = BronzeAccent, onPrimary = BronzeDarkBg,
     primaryContainer = BronzeAccentDark, onPrimaryContainer = BronzeLightBg,
     secondary = BronzeSuccess, onSecondary = BronzeDarkBg,
     background = BronzeDarkBg, onBackground = BronzeLightBg,
     surface = BronzeDarkSurface, onSurface = BronzeLightBg,
     surfaceVariant = BronzeDarkSurfaceLight, onSurfaceVariant = BronzeMutedDark,
-    error = BronzeAccent, onError = BronzeLightBg
-)
-val BronzeLightColors: ColorScheme = lightColorScheme(
-    primary = BronzeAccent, onPrimary = BronzeLightBg,
-    primaryContainer = BronzeLightSurfaceDim, onPrimaryContainer = BronzeDarkBg,
-    secondary = BronzeSuccess, onSecondary = BronzeLightBg,
-    background = BronzeLightBg, onBackground = BronzeDarkBg,
-    surface = BronzeLightSurfaceDim, onSurface = BronzeDarkBg,
-    surfaceVariant = BronzeLightSurfaceDim, onSurfaceVariant = BronzeMutedLight,
-    error = BronzeAccent, onError = BronzeLightBg
+    error = BronzeAccent, onError = BronzeDarkBg
 )
 
 // --- Steel (Level 10) ---
@@ -64,15 +56,6 @@ val SteelDarkColors: ColorScheme = darkColorScheme(
     surfaceVariant = SteelDarkSurfaceLight, onSurfaceVariant = SteelMutedDark,
     error = SteelAccent, onError = SteelDarkBg
 )
-val SteelLightColors: ColorScheme = lightColorScheme(
-    primary = SteelAccent, onPrimary = SteelDarkBg,
-    primaryContainer = SteelLightSurfaceDim, onPrimaryContainer = SteelDarkBg,
-    secondary = SteelSuccess, onSecondary = SteelLightBg,
-    background = SteelLightBg, onBackground = SteelDarkBg,
-    surface = SteelLightSurfaceDim, onSurface = SteelDarkBg,
-    surfaceVariant = SteelLightSurfaceDim, onSurfaceVariant = SteelMutedLight,
-    error = SteelAccent, onError = SteelDarkBg
-)
 
 // --- Gold (Level 20) ---
 private val GoldAccent = Color(0xFFF0B93D)
@@ -88,21 +71,14 @@ private val GoldSuccess = Color(0xFF8FC24E)
 
 val GoldDarkColors: ColorScheme = darkColorScheme(
     primary = GoldAccent, onPrimary = GoldDarkBg,
+    // Gold's AccentDark container also measured below 3:1 with light text —
+    // dark text here too, unlike Bronze/Steel/Obsidian's containers.
     primaryContainer = GoldAccentDark, onPrimaryContainer = GoldDarkBg,
     secondary = GoldSuccess, onSecondary = GoldDarkBg,
     background = GoldDarkBg, onBackground = GoldLightBg,
     surface = GoldDarkSurface, onSurface = GoldLightBg,
     surfaceVariant = GoldDarkSurfaceLight, onSurfaceVariant = GoldMutedDark,
     error = GoldAccent, onError = GoldDarkBg
-)
-val GoldLightColors: ColorScheme = lightColorScheme(
-    primary = GoldAccentDark, onPrimary = GoldLightBg,
-    primaryContainer = GoldLightSurfaceDim, onPrimaryContainer = GoldDarkBg,
-    secondary = GoldSuccess, onSecondary = GoldLightBg,
-    background = GoldLightBg, onBackground = GoldDarkBg,
-    surface = GoldLightSurfaceDim, onSurface = GoldDarkBg,
-    surfaceVariant = GoldLightSurfaceDim, onSurfaceVariant = GoldMutedLight,
-    error = GoldAccentDark, onError = GoldLightBg
 )
 
 // --- Obsidian (Level 30, season cap) ---
@@ -126,15 +102,6 @@ val ObsidianDarkColors: ColorScheme = darkColorScheme(
     surfaceVariant = ObsidianDarkSurfaceLight, onSurfaceVariant = ObsidianMutedDark,
     error = ObsidianAccent, onError = ObsidianDarkBg
 )
-val ObsidianLightColors: ColorScheme = lightColorScheme(
-    primary = ObsidianAccentDark, onPrimary = ObsidianLightBg,
-    primaryContainer = ObsidianLightSurfaceDim, onPrimaryContainer = ObsidianDarkBg,
-    secondary = ObsidianSuccess, onSecondary = ObsidianLightBg,
-    background = ObsidianLightBg, onBackground = ObsidianDarkBg,
-    surface = ObsidianLightSurfaceDim, onSurface = ObsidianDarkBg,
-    surfaceVariant = ObsidianLightSurfaceDim, onSurfaceVariant = ObsidianMutedLight,
-    error = ObsidianAccentDark, onError = ObsidianLightBg
-)
 
 // --- Prestige (unlocked via prestiging, not the level ladder) ---
 private val PrestigeAccent = Color(0xFFFFC845)
@@ -150,19 +117,11 @@ private val PrestigeSuccess = Color(0xFF7FC25C)
 
 val PrestigeDarkColors: ColorScheme = darkColorScheme(
     primary = PrestigeAccent, onPrimary = PrestigeDarkBg,
+    // Same as Gold: AccentDark container also fails with light text here.
     primaryContainer = PrestigeAccentDark, onPrimaryContainer = PrestigeDarkBg,
     secondary = PrestigeSuccess, onSecondary = PrestigeDarkBg,
     background = PrestigeDarkBg, onBackground = PrestigeLightBg,
     surface = PrestigeDarkSurface, onSurface = PrestigeLightBg,
     surfaceVariant = PrestigeDarkSurfaceLight, onSurfaceVariant = PrestigeMutedDark,
     error = PrestigeAccent, onError = PrestigeDarkBg
-)
-val PrestigeLightColors: ColorScheme = lightColorScheme(
-    primary = PrestigeAccentDark, onPrimary = PrestigeLightBg,
-    primaryContainer = PrestigeLightSurfaceDim, onPrimaryContainer = PrestigeDarkBg,
-    secondary = PrestigeSuccess, onSecondary = PrestigeLightBg,
-    background = PrestigeLightBg, onBackground = PrestigeDarkBg,
-    surface = PrestigeLightSurfaceDim, onSurface = PrestigeDarkBg,
-    surfaceVariant = PrestigeLightSurfaceDim, onSurfaceVariant = PrestigeMutedLight,
-    error = PrestigeAccentDark, onError = PrestigeLightBg
 )

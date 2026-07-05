@@ -110,7 +110,12 @@ fun GymTrackerApp(activeVm: ActiveWorkoutViewModel = viewModel()) {
                                     }
                                 },
                                 icon = { Icon(screen.icon, contentDescription = screen.label) },
-                                label = { Text(screen.label) }
+                                label = { Text(screen.label) },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                                    indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                                )
                             )
                         }
                     }
