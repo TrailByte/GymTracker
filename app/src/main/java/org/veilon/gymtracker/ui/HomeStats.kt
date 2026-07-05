@@ -6,6 +6,7 @@ data class ExercisePR(
     val exerciseName: String,
     val muscleGroup: String,
     val maxWeightKg: Double,       // heaviest single set
+    val maxWeightReps: Int,        // the reps performed at that weight
     val maxWeightDate: Long,
     val maxVolumeKg: Double,       // best weight × reps in a single set
     val maxVolumeReps: Int,        // the reps that produced maxVolume

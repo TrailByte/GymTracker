@@ -201,7 +201,7 @@ private fun StatsRecordCard(pr: ExercisePR, useLbs: Boolean) {
             Column(Modifier.weight(1f)) {
                 Text(pr.exerciseName, fontWeight = FontWeight.SemiBold)
                 Text(
-                    "Best set: ${formatWeight(pr.maxWeightKg, useLbs)} · ${dateFmt.format(Date(pr.maxWeightDate))}",
+                    "Best set: ${pr.maxWeightReps}×${formatWeight(pr.maxWeightKg, useLbs)} · ${dateFmt.format(Date(pr.maxWeightDate))}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
