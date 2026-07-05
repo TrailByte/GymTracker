@@ -157,7 +157,18 @@ fun GymTrackerApp(activeVm: ActiveWorkoutViewModel = viewModel()) {
                     onBack = { navController.popBackStack() }
                 )
             }
-            composable(Screen.Progress.route) { ProgressScreen() }
+            composable(Screen.Progress.route) {
+                ProgressScreen(
+                    onOpenExercise = { exerciseId -> navController.navigate("exercise_history/$exerciseId") }
+                )
+            }
+            composable("exercise_history/{exerciseId}") { backStack ->
+                val exerciseId = backStack.arguments?.getString("exerciseId")?.toLong() ?: return@composable
+                ExerciseHistoryScreen(
+                    exerciseId = exerciseId,
+                    onBack = { navController.popBackStack() }
+                )
+            }
             composable(Screen.Profile.route) {
                 ProfileScreen(
                     onOpenSettings = { navController.navigate("settings") },

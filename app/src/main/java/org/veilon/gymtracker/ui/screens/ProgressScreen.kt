@@ -3,13 +3,13 @@ package org.veilon.gymtracker.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -26,47 +26,66 @@ import java.util.Locale
 import kotlin.math.roundToInt
 
 @Composable
-fun ProgressScreen(viewModel: StatsViewModel = viewModel()) {
+fun ProgressScreen(
+    onOpenExercise: (Long) -> Unit,
+    viewModel: StatsViewModel = viewModel()
+) {
     val prs by viewModel.prs.collectAsState()
     val useLbs by viewModel.useLbs.collectAsState()
     val weeklyVolume by viewModel.weeklyVolume.collectAsState()
     val weeklyFrequency by viewModel.weeklyFrequency.collectAsState()
 
-    val grouped = prs.groupBy { it.muscleGroup }
-    val hasAnyData = prs.isNotEmpty() || weeklyVolume.any { it.value > 0 }
+    var tab by remember { mutableStateOf(0) }
+    var muscleFilter by remember { mutableStateOf("All") }
+
+    Column(Modifier.fillMaxSize()) {
+        Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+            ScreenTitle("Progress")
+        }
+        TabRow(selectedTabIndex = tab) {
+            Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Overview") })
+            Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Records") })
+        }
+
+        when (tab) {
+            0 -> OverviewTab(weeklyVolume, weeklyFrequency, useLbs)
+            else -> RecordsTab(
+                prs = prs,
+                useLbs = useLbs,
+                muscleFilter = muscleFilter,
+                onFilterChange = { muscleFilter = it },
+                onOpenExercise = onOpenExercise
+            )
+        }
+    }
+}
+
+@Composable
+private fun OverviewTab(weeklyVolume: List<WeekPoint>, weeklyFrequency: List<WeekPoint>, useLbs: Boolean) {
+    val hasData = weeklyVolume.any { it.value > 0 } || weeklyFrequency.any { it.value > 0 }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
         contentPadding = PaddingValues(vertical = 16.dp)
     ) {
-        item { ScreenTitle("Progress") }
-
-        if (!hasAnyData) {
+        if (!hasData) {
             item {
                 Box(Modifier.fillMaxWidth().padding(top = 48.dp), contentAlignment = Alignment.Center) {
                     Text(
-                        "No data yet — complete some sets to see your progress here.",
+                        "No workouts yet — finish one to see your trends here.",
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
         }
-
-        // --- Weekly volume trend ---
         if (weeklyVolume.any { it.value > 0 }) {
             item {
                 val unit = if (useLbs) "lbs" else "kg"
-                Text(
-                    "WEEKLY VOLUME ($unit)",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                SectionLabel("WEEKLY VOLUME ($unit)")
                 Spacer(Modifier.height(8.dp))
                 val displayPoints = weeklyVolume.map { p ->
-                    val v = if (useLbs) p.value * 2.20462 else p.value
-                    p.copy(value = v)
+                    p.copy(value = if (useLbs) p.value * 2.20462 else p.value)
                 }
                 Card(Modifier.fillMaxWidth()) {
                     SimpleBarChart(
@@ -77,59 +96,103 @@ fun ProgressScreen(viewModel: StatsViewModel = viewModel()) {
                 }
             }
         }
-
-        // --- Workout frequency ---
         if (weeklyFrequency.any { it.value > 0 }) {
             item {
-                Text(
-                    "WORKOUTS PER WEEK",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                SectionLabel("WORKOUTS PER WEEK")
                 Spacer(Modifier.height(8.dp))
                 Card(Modifier.fillMaxWidth()) {
                     SimpleBarChart(
                         data = weeklyFrequency,
                         modifier = Modifier.padding(16.dp),
                         barColor = MaterialTheme.colorScheme.secondary,
-                        valueFormatter = { v -> v.roundToInt().toString() }
+                        valueFormatter = { it.roundToInt().toString() }
                     )
-                }
-            }
-        }
-
-        // --- Personal records ---
-        if (prs.isNotEmpty()) {
-            item {
-                Text(
-                    "PERSONAL RECORDS",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-            grouped.toSortedMap().forEach { (group, list) ->
-                item {
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        group.uppercase(),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                items(list.sortedByDescending { it.maxWeightKg }, key = { it.exerciseId }) { pr ->
-                    StatsRecordCard(pr, useLbs)
                 }
             }
         }
     }
 }
 
+@Composable
+private fun RecordsTab(
+    prs: List<ExercisePR>,
+    useLbs: Boolean,
+    muscleFilter: String,
+    onFilterChange: (String) -> Unit,
+    onOpenExercise: (Long) -> Unit
+) {
+    val muscleGroups = remember(prs) { prs.map { it.muscleGroup }.distinct().sorted() }
+    val filtered = if (muscleFilter == "All") prs else prs.filter { it.muscleGroup == muscleFilter }
+    val grouped = filtered.groupBy { it.muscleGroup }.toSortedMap()
+
+    Column(Modifier.fillMaxSize()) {
+        if (muscleGroups.size > 1) {
+            LazyRow(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                item {
+                    FilterChip(
+                        selected = muscleFilter == "All",
+                        onClick = { onFilterChange("All") },
+                        label = { Text("All") }
+                    )
+                }
+                items(muscleGroups) { mg ->
+                    FilterChip(
+                        selected = muscleFilter == mg,
+                        onClick = { onFilterChange(mg) },
+                        label = { Text(mg) }
+                    )
+                }
+            }
+        }
+
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(vertical = 8.dp)
+        ) {
+            if (prs.isEmpty()) {
+                item {
+                    Box(Modifier.fillMaxWidth().padding(top = 48.dp), contentAlignment = Alignment.Center) {
+                        Text(
+                            "No personal records yet — complete some sets to see them here.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+            grouped.forEach { (group, list) ->
+                item {
+                    Text(
+                        group.uppercase(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+                items(list.sortedByDescending { it.maxWeightKg }, key = { it.exerciseId }) { pr ->
+                    StatsRecordCard(pr, useLbs, onClick = { onOpenExercise(pr.exerciseId) })
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SectionLabel(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.labelMedium,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.primary
+    )
+}
+
 /**
- * A simple bar chart built from plain layout (no Canvas, no charting library):
- * each bar is a Box sized by fillMaxHeight(fraction-of-max), so it's just
- * ordinary Compose measurement doing the work.
+ * Simple bar chart from plain layout (no Canvas, no library): each bar is a
+ * Box sized by fillMaxHeight(fraction-of-max).
  */
 @Composable
 private fun SimpleBarChart(
@@ -186,10 +249,10 @@ private fun SimpleBarChart(
 }
 
 @Composable
-private fun StatsRecordCard(pr: ExercisePR, useLbs: Boolean) {
+private fun StatsRecordCard(pr: ExercisePR, useLbs: Boolean, onClick: () -> Unit) {
     val dateFmt = remember { SimpleDateFormat("MMM d", Locale.getDefault()) }
 
-    Card(Modifier.fillMaxWidth()) {
+    Card(modifier = Modifier.fillMaxWidth(), onClick = onClick) {
         Row(
             Modifier.padding(12.dp).fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp),

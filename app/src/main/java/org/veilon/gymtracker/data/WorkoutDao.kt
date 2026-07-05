@@ -65,4 +65,6 @@ interface WorkoutDao {
     @Query("SELECT * FROM session_exercise_order")
     fun getAllExerciseOrder(): Flow<List<SessionExerciseOrder>>
 
+    @Query("SELECT * FROM exercise_logs WHERE exerciseId = :exerciseId AND completed = 1")
+    fun getCompletedLogsForExercise(exerciseId: Long): Flow<List<ExerciseLog>>
 }
