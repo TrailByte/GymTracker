@@ -23,6 +23,7 @@ object UserPreferences {
     private val TOTAL_PR_COUNT: Preferences.Key<Long> = longPreferencesKey("total_pr_count")
     private val LAST_KNOWN_STREAK: Preferences.Key<Int> = intPreferencesKey("last_known_streak")
     private val GAMIFICATION_BACKFILLED: Preferences.Key<Boolean> = booleanPreferencesKey("gamification_backfilled")
+    private val SELECTED_THEME: Preferences.Key<String> = androidx.datastore.preferences.core.stringPreferencesKey("selected_theme")
     private val GAMIFICATION_BACKFILL_VERSION: Preferences.Key<Int> = intPreferencesKey("gamification_backfill_version")
     private val WEEKLY_GOAL: Preferences.Key<Int> = intPreferencesKey("weekly_goal")
 
@@ -131,5 +132,12 @@ object UserPreferences {
 
     suspend fun setThemeMode(context: Context, mode: String) {
         context.dataStore.edit { it[THEME_MODE] = mode }
+    }
+
+    fun selectedTheme(context: Context): Flow<String> =
+        context.dataStore.data.map { prefs -> prefs[SELECTED_THEME] ?: "default" }
+
+    suspend fun setSelectedTheme(context: Context, themeId: String) {
+        context.dataStore.edit { prefs -> prefs[SELECTED_THEME] = themeId }
     }
 }

@@ -10,6 +10,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.veilon.gymtracker.ui.SettingsViewModel
 import org.veilon.gymtracker.ui.theme.ScreenTitle
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Lock
 
 @Composable
 fun SettingsScreen(viewModel: SettingsViewModel = viewModel()) {
@@ -17,6 +20,8 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel()) {
     val restSeconds by viewModel.restSeconds.collectAsState()
     val weeklyGoal by viewModel.weeklyGoal.collectAsState()
     val themeMode by viewModel.themeMode.collectAsState()
+    val selectedTheme by viewModel.selectedTheme.collectAsState()
+    val (level, prestige) = viewModel.levelAndPrestige.collectAsState().value
 
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
@@ -37,6 +42,65 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel()) {
                                 label = { Text(label) }
                             )
                         }
+                }
+            }
+        }
+
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp)) {
+                Text("Theme", fontWeight = FontWeight.SemiBold)
+                Text(
+                    "Unlock new looks by leveling up and prestiging",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(12.dp))
+                val allTiers = org.veilon.gymtracker.ui.theme.ThemeUnlocks.LADDER +
+                        org.veilon.gymtracker.ui.theme.ThemeUnlocks.PRESTIGE_THEME
+                allTiers.forEachIndexed { index, tier ->
+                    val isUnlocked = if (tier.id == "prestige") prestige > 0 else level >= tier.unlockLevel
+                    val isSelected = selectedTheme == tier.id
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .let { m -> if (isUnlocked) m.clickable { viewModel.setSelectedTheme(tier.id) } else m }
+                            .padding(vertical = 10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                tier.displayName,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                color = if (isUnlocked) MaterialTheme.colorScheme.onSurface
+                                else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            if (!isUnlocked) {
+                                Text(
+                                    if (tier.id == "prestige") "Unlocks via Prestige"
+                                    else "Unlocks at Level ${tier.unlockLevel}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        if (isSelected) {
+                            Icon(
+                                androidx.compose.material.icons.Icons.Default.Check,
+                                contentDescription = "Selected",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        } else if (!isUnlocked) {
+                            Icon(
+                                androidx.compose.material.icons.Icons.Default.Lock,
+                                contentDescription = "Locked",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    if (index != allTiers.lastIndex) {
+                        HorizontalDivider()
+                    }
                 }
             }
         }

@@ -54,7 +54,10 @@ class MainActivity : ComponentActivity() {
             val themeMode by org.veilon.gymtracker.ui.UserPreferences
                 .themeMode(applicationContext)
                 .collectAsState(initial = "system")
-            GymTrackerTheme(themeMode = themeMode) {
+            val selectedTheme by org.veilon.gymtracker.ui.UserPreferences
+                .selectedTheme(applicationContext)
+                .collectAsState(initial = "default")
+            GymTrackerTheme(themeMode = themeMode, themeId = selectedTheme) {
                 GymTrackerApp()
             }
         }

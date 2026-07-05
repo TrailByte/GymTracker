@@ -4,8 +4,10 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import org.veilon.gymtracker.gamification.GamificationEngine
 
 class SettingsViewModel(app: Application) : AndroidViewModel(app) {
 
@@ -40,4 +42,18 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
     fun setThemeMode(mode: String) {
         viewModelScope.launch { UserPreferences.setThemeMode(appContext, mode) }
     }
+
+    val selectedTheme = UserPreferences.selectedTheme(app)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "default")
+
+    fun setSelectedTheme(themeId: String) {
+        viewModelScope.launch { UserPreferences.setSelectedTheme(appContext, themeId) }
+    }
+
+    // Level + prestige, so the theme picker knows which tiers are unlocked
+    val levelAndPrestige = combine(
+        UserPreferences.totalXp(app),
+        UserPreferences.prestigeLevel(app)
+    ) { xp, prestige -> GamificationEngine.levelForXp(xp) to prestige }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 1 to 0)
 }
