@@ -194,66 +194,86 @@ private fun SimpleLineChart(
             )
         }
         Spacer(Modifier.height(4.dp))
-        Canvas(
-            Modifier
-                .fillMaxWidth()
-                .height(140.dp)
-                .onSizeChanged { canvasWidthPx = it.width.toFloat() }
-                .pointerInput(points) {
-                    detectTapGestures { offset -> selectNearest(offset.x) }
-                }
-                .pointerInput(points) {
-                    detectDragGestures { change, _ ->
-                        selectNearest(change.position.x)
-                        change.consume()
+        Row(Modifier.fillMaxWidth()) {
+            // Y-axis labels in their own reserved column — never overlaps the line
+            Column(
+                modifier = Modifier.height(140.dp).width(36.dp),
+                verticalArrangement = Arrangement.SpaceBetween,
+                horizontalAlignment = Alignment.End
+            ) {
+                Text(
+                    valueFormatter(maxY),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    valueFormatter(minY),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Spacer(Modifier.width(6.dp))
+            Canvas(
+                Modifier
+                    .weight(1f)
+                    .height(140.dp)
+                    .onSizeChanged { canvasWidthPx = it.width.toFloat() }
+                    .pointerInput(points) {
+                        detectTapGestures { offset -> selectNearest(offset.x) }
                     }
-                }
-        ) {
-            val w = size.width
-            val h = size.height
-            val topPad = 8.dp.toPx()
-            val bottomPad = 8.dp.toPx()
-            val drawableH = h - topPad - bottomPad
+                    .pointerInput(points) {
+                        detectDragGestures { change, _ ->
+                            selectNearest(change.position.x)
+                            change.consume()
+                        }
+                    }
+            ) {
+                val w = size.width
+                val h = size.height
+                val topPad = 8.dp.toPx()
+                val bottomPad = 8.dp.toPx()
+                val drawableH = h - topPad - bottomPad
 
-            fun xForDraw(t: Long) = xFor(t, w)
-            fun yFor(v: Double) = topPad + drawableH - (((v - minY) / (maxY - minY)).toFloat() * drawableH)
+                fun xForDraw(t: Long) = xFor(t, w)
+                fun yFor(v: Double) = topPad + drawableH - (((v - minY) / (maxY - minY)).toFloat() * drawableH)
 
-            if (points.size == 1) {
-                val (_, v) = points[0]
-                drawCircle(color = lineColor, radius = 6.dp.toPx(), center = Offset(w / 2f, yFor(v)))
-            } else {
-                val path = Path()
-                points.forEachIndexed { i, (t, v) ->
-                    val x = xForDraw(t)
-                    val y = yFor(v)
-                    if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
-                }
-                drawPath(
-                    path,
-                    color = lineColor,
-                    style = Stroke(width = 4.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
-                )
-                // Vertical guide line under the selected point
-                val selX = xForDraw(selected.first)
-                drawLine(
-                    color = lineColor.copy(alpha = 0.3f),
-                    start = Offset(selX, 0f),
-                    end = Offset(selX, h),
-                    strokeWidth = 2.dp.toPx()
-                )
-                points.forEachIndexed { i, (t, v) ->
-                    val isSelected = i == selectedIndex
-                    drawCircle(
+                if (points.size == 1) {
+                    val (_, v) = points[0]
+                    drawCircle(color = lineColor, radius = 6.dp.toPx(), center = Offset(w / 2f, yFor(v)))
+                } else {
+                    val path = Path()
+                    points.forEachIndexed { i, (t, v) ->
+                        val x = xForDraw(t)
+                        val y = yFor(v)
+                        if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                    }
+                    drawPath(
+                        path,
                         color = lineColor,
-                        radius = if (isSelected) 7.dp.toPx() else 4.dp.toPx(),
-                        center = Offset(xForDraw(t), yFor(v))
+                        style = Stroke(width = 4.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
                     )
-                    if (isSelected) {
+                    // Vertical guide line under the selected point
+                    val selX = xForDraw(selected.first)
+                    drawLine(
+                        color = lineColor.copy(alpha = 0.3f),
+                        start = Offset(selX, 0f),
+                        end = Offset(selX, h),
+                        strokeWidth = 2.dp.toPx()
+                    )
+                    points.forEachIndexed { i, (t, v) ->
+                        val isSelected = i == selectedIndex
                         drawCircle(
-                            color = Color.White,
-                            radius = 3.dp.toPx(),
+                            color = lineColor,
+                            radius = if (isSelected) 7.dp.toPx() else 4.dp.toPx(),
                             center = Offset(xForDraw(t), yFor(v))
                         )
+                        if (isSelected) {
+                            drawCircle(
+                                color = Color.White,
+                                radius = 3.dp.toPx(),
+                                center = Offset(xForDraw(t), yFor(v))
+                            )
+                        }
                     }
                 }
             }
