@@ -109,5 +109,53 @@ fun SettingsScreen(viewModel: SettingsViewModel = viewModel()) {
                 }
             }
         }
+
+        Spacer(Modifier.height(24.dp))
+        Text(
+            "DEBUG",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Test celebration overlay", fontWeight = FontWeight.SemiBold)
+                Text(
+                    "Preview only — doesn't touch real XP or achievements",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            org.veilon.gymtracker.gamification.CelebrationBus.push(
+                                listOf(
+                                    org.veilon.gymtracker.gamification.Celebration.LevelUp(
+                                        newLevel = 5,
+                                        prestige = 0,
+                                        newTheme = org.veilon.gymtracker.ui.theme.ThemeUnlocks.themeUnlockedAtLevel(5)
+                                    )
+                                )
+                            )
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) { Text("Preview Level Up") }
+                    OutlinedButton(
+                        onClick = {
+                            org.veilon.gymtracker.gamification.CelebrationBus.push(
+                                listOf(
+                                    org.veilon.gymtracker.gamification.Celebration.AchievementUnlocked(
+                                        org.veilon.gymtracker.gamification.Achievements.ALL.first()
+                                    )
+                                )
+                            )
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) { Text("Preview Achievement") }
+                }
+            }
+        }
     }
 }

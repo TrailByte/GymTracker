@@ -6,6 +6,7 @@ import org.veilon.gymtracker.data.AppDatabase
 import org.veilon.gymtracker.data.UnlockedAchievement
 import org.veilon.gymtracker.ui.UserPreferences
 import org.veilon.gymtracker.ui.computeWeekStreak
+import org.veilon.gymtracker.ui.theme.ThemeUnlocks
 
 /**
  * Central place for gamification rules. Kept as a plain object (not a
@@ -16,6 +17,11 @@ import org.veilon.gymtracker.ui.computeWeekStreak
  * Level is DERIVED from total XP, never stored — see levelForXp() below.
  * Achievement unlocks ARE stored (unlocked_achievements table), because
  * "which ones, and when" is a genuine fact that can't be recomputed later.
+ *
+ * Live event hooks (onWorkoutFinished, onPrBroken) push whatever happened to
+ * CelebrationBus so the UI can show a full-screen moment. The historical
+ * backfill deliberately does NOT push celebrations — retroactive credit on
+ * first launch after an update shouldn't trigger a barrage of popups.
  */
 object GamificationEngine {
 
@@ -47,47 +53,55 @@ object GamificationEngine {
         return Triple(xp - floor, ceiling - floor, level)
     }
 
-    // --- Event hooks ---
+    // --- Event hooks (live — these DO push celebrations) ---
 
     /** Call when a workout finishes. Awards workout XP, checks workout-count,
-     *  lifetime-volume, and streak-increase achievements. */
+     *  lifetime-volume, and streak-increase achievements, and shows a
+     *  celebration for anything newly earned. */
     suspend fun onWorkoutFinished(context: Context) {
-        addXp(context, XP_PER_WORKOUT)
+        val celebrations = mutableListOf<Celebration>()
+        var xpToAdd = XP_PER_WORKOUT
 
         val db = AppDatabase.getInstance(context)
         val sessions = db.workoutDao().getAllSessions().first()
-        checkThresholdAchievements(context, AchievementType.WORKOUT_COUNT, sessions.size.toLong())
+        celebrations += checkThresholdAchievements(context, AchievementType.WORKOUT_COUNT, sessions.size.toLong())
 
         val logs = db.workoutDao().getAllCompletedLogsOnce()
         val totalVolume = logs.sumOf { it.weight * it.reps }
-        checkThresholdAchievements(context, AchievementType.LIFETIME_VOLUME_KG, totalVolume.toLong())
+        celebrations += checkThresholdAchievements(context, AchievementType.LIFETIME_VOLUME_KG, totalVolume.toLong())
 
         val weeklyGoal = UserPreferences.weeklyGoal(context).first()
         val newStreak = computeWeekStreak(sessions.map { it.date }, weeklyGoal)
         val lastStreak = UserPreferences.lastKnownStreak(context).first()
         if (newStreak > lastStreak) {
-            addXp(context, XP_PER_STREAK_WEEK * (newStreak - lastStreak))
-            checkThresholdAchievements(context, AchievementType.STREAK_WEEKS, newStreak.toLong())
+            xpToAdd += XP_PER_STREAK_WEEK * (newStreak - lastStreak)
+            celebrations += checkThresholdAchievements(context, AchievementType.STREAK_WEEKS, newStreak.toLong())
         }
         UserPreferences.setLastKnownStreak(context, newStreak)
+
+        addXp(context, xpToAdd)?.let { celebrations += it }
+
+        CelebrationBus.push(celebrations)
     }
 
     /** Call once for each record (weight/volume) a completed set actually improves.
      *  count=0: nothing to do. count=1: one of the two improved. count=2: both did. */
     suspend fun onPrBroken(context: Context, count: Int) {
         if (count <= 0) return
-        repeat(count) { addXp(context, XP_PER_PR) }
+        val celebrations = mutableListOf<Celebration>()
+
         val newTotal = UserPreferences.totalPrCount(context).first() + count
         UserPreferences.setTotalPrCount(context, newTotal)
-        checkThresholdAchievements(context, AchievementType.PR_COUNT, newTotal)
+        celebrations += checkThresholdAchievements(context, AchievementType.PR_COUNT, newTotal)
+
+        addXp(context, XP_PER_PR * count)?.let { celebrations += it }
+
+        CelebrationBus.push(celebrations)
     }
 
-    // --- One-time historical backfill (mirrors the exercise_records backfill) ---
+    // --- One-time historical backfill (mirrors the exercise_records backfill).
+    // Silent by design — see class doc above. ---
 
-    /** Runs once ever: replays existing history to (a) count real historical PR
-     *  events, and (b) retroactively unlock any achievement already earned
-     *  before this feature existed (e.g. someone with 40 logged workouts
-     *  should immediately have "10 Workouts" unlocked, not wait for #41). */
     // Bump this any time backfill logic changes materially — it forces every
     // installed phone to re-run the (corrected) calculation once, automatically.
     private const val CURRENT_BACKFILL_VERSION = 3
@@ -115,7 +129,7 @@ object GamificationEngine {
             }
         }
         UserPreferences.setTotalPrCount(context, totalPrEvents)
-        checkThresholdAchievements(context, AchievementType.PR_COUNT, totalPrEvents)
+        checkThresholdAchievements(context, AchievementType.PR_COUNT, totalPrEvents) // return value ignored: silent
 
         checkThresholdAchievements(context, AchievementType.WORKOUT_COUNT, sessions.size.toLong())
         val totalVolume = allLogs.sumOf { it.weight * it.reps }
@@ -126,10 +140,8 @@ object GamificationEngine {
         checkThresholdAchievements(context, AchievementType.STREAK_WEEKS, currentStreak.toLong())
         UserPreferences.setLastKnownStreak(context, currentStreak)
 
-        // THE FIX: actually award the XP this history represents. This is an
-        // absolute recompute-and-SET (not an incremental add), which is what
-        // makes it safe to bump CURRENT_BACKFILL_VERSION again in the future
-        // without worrying about double-counting whatever's already stored.
+        // Absolute recompute-and-SET (not incremental add) — safe to re-run
+        // any number of times without double-counting.
         val recomputedXp = sessions.size * XP_PER_WORKOUT +
                 totalPrEvents * XP_PER_PR +
                 currentStreak * XP_PER_STREAK_WEEK
@@ -140,18 +152,36 @@ object GamificationEngine {
 
     // --- Internals ---
 
-    private suspend fun addXp(context: Context, amount: Long) {
+    /** Adds XP; returns a LevelUp celebration if this crossed a level boundary
+     *  (enriched with the theme name if this level also unlocks one), else null. */
+    private suspend fun addXp(context: Context, amount: Long): Celebration.LevelUp? {
         val current = UserPreferences.totalXp(context).first()
-        UserPreferences.setTotalXp(context, current + amount)
+        val oldLevel = levelForXp(current)
+        val newTotal = current + amount
+        UserPreferences.setTotalXp(context, newTotal)
+        val newLevel = levelForXp(newTotal)
+
+        if (newLevel <= oldLevel) return null
+        val prestige = UserPreferences.prestigeLevel(context).first()
+        val unlockedTheme = ThemeUnlocks.themeUnlockedAtLevel(newLevel)
+        return Celebration.LevelUp(newLevel = newLevel, prestige = prestige, newTheme = unlockedTheme)
     }
 
-    private suspend fun checkThresholdAchievements(context: Context, type: AchievementType, currentValue: Long) {
+    /** Unlocks any achievement of [type] whose threshold [currentValue] now
+     *  meets, and returns celebrations for whichever ones were newly unlocked
+     *  (empty list if none, or if all were already unlocked). */
+    private suspend fun checkThresholdAchievements(
+        context: Context,
+        type: AchievementType,
+        currentValue: Long
+    ): List<Celebration.AchievementUnlocked> {
         val db = AppDatabase.getInstance(context)
         val alreadyUnlocked = db.achievementDao().getUnlockedIdsOnce().toSet()
-        Achievements.ALL
+        val newlyUnlocked = Achievements.ALL
             .filter { it.type == type && currentValue >= it.threshold && it.id !in alreadyUnlocked }
-            .forEach { achievement ->
-                db.achievementDao().unlock(UnlockedAchievement(achievement.id, System.currentTimeMillis()))
-            }
+        newlyUnlocked.forEach { achievement ->
+            db.achievementDao().unlock(UnlockedAchievement(achievement.id, System.currentTimeMillis()))
+        }
+        return newlyUnlocked.map { Celebration.AchievementUnlocked(it) }
     }
 }

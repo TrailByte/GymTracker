@@ -70,6 +70,14 @@ fun GymTrackerApp(activeVm: ActiveWorkoutViewModel = viewModel()) {
     val activeSessionId by activeVm.activeSessionId.collectAsState()
     val activeSession by activeVm.activeSession.collectAsState()
 
+    val pendingCelebrations by org.veilon.gymtracker.gamification.CelebrationBus.pending.collectAsState()
+    pendingCelebrations.firstOrNull()?.let { celebration ->
+        org.veilon.gymtracker.ui.screens.CelebrationOverlay(
+            celebration = celebration,
+            onDismiss = { org.veilon.gymtracker.gamification.CelebrationBus.dismissCurrent() }
+        )
+    }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
