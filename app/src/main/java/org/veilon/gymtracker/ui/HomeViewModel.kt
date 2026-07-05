@@ -47,6 +47,7 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 UserPreferences.setRecordsBackfilled(app, true)
             }
+            org.veilon.gymtracker.gamification.GamificationEngine.backfillIfNeeded(app)
         }
     }
 
