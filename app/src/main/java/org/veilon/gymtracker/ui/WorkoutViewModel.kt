@@ -19,6 +19,7 @@ import org.veilon.gymtracker.data.WorkoutSession
 import org.veilon.gymtracker.data.SessionExerciseOrder
 import org.veilon.gymtracker.RestTimerService
 import org.veilon.gymtracker.data.ExerciseRecord
+import org.veilon.gymtracker.gamification.GamificationEngine
 
 class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
 
@@ -160,16 +161,18 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
     // Checks a completed set's weight and volume against the stored record for
     // this exercise, and updates whichever (or both) it newly beats. O(1) —
     // one read, one write, never a scan.
-    private suspend fun updateRecordIfBetter(exerciseId: Long, weight: Double, reps: Int) {
+    private suspend fun updateRecordIfBetter(exerciseId: Long, weight: Double, reps: Int): Int {
         val whenAchieved = System.currentTimeMillis()
         val existing = recordDao.getRecord(exerciseId)
         val volume = weight * reps
+        var improvements = 0
 
         var maxWeightKg = existing?.maxWeightKg ?: 0.0
         var maxWeightReps = existing?.maxWeightReps ?: 0
         var maxWeightDate = existing?.maxWeightDate ?: whenAchieved
         if (weight > maxWeightKg) {
             maxWeightKg = weight; maxWeightReps = reps; maxWeightDate = whenAchieved
+            improvements++
         }
 
         var maxVolumeKg = existing?.maxVolumeKg ?: 0.0
@@ -178,6 +181,7 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
         var maxVolumeDate = existing?.maxVolumeDate ?: whenAchieved
         if (volume > maxVolumeKg) {
             maxVolumeKg = volume; maxVolumeWeightKg = weight; maxVolumeReps = reps; maxVolumeDate = whenAchieved
+            improvements++
         }
 
         recordDao.upsertRecord(
@@ -192,6 +196,11 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
                 maxVolumeDate = maxVolumeDate
             )
         )
+
+        if (improvements > 0) {
+            GamificationEngine.onPrBroken(appContext, improvements)
+        }
+        return improvements
     }
 
     fun deleteSet(log: ExerciseLog) {
@@ -221,6 +230,7 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
             UserPreferences.setRestEndsAt(appContext, null)
             RestTimerService.stop(appContext)
             _restForExerciseId.value = null
+            GamificationEngine.onWorkoutFinished(appContext)
             onDone()
         }
     }

@@ -18,6 +18,11 @@ object UserPreferences {
     private val ACTIVE_SESSION: Preferences.Key<Long> = longPreferencesKey("active_session")
     private val REST_ENDS_AT: Preferences.Key<Long> = longPreferencesKey("rest_ends_at")
     private val RECORDS_BACKFILLED: Preferences.Key<Boolean> = booleanPreferencesKey("records_backfilled")
+    private val TOTAL_XP: Preferences.Key<Long> = longPreferencesKey("total_xp")
+    private val PRESTIGE_LEVEL: Preferences.Key<Int> = intPreferencesKey("prestige_level")
+    private val TOTAL_PR_COUNT: Preferences.Key<Long> = longPreferencesKey("total_pr_count")
+    private val LAST_KNOWN_STREAK: Preferences.Key<Int> = intPreferencesKey("last_known_streak")
+    private val GAMIFICATION_BACKFILLED: Preferences.Key<Boolean> = booleanPreferencesKey("gamification_backfilled")
     private val WEEKLY_GOAL: Preferences.Key<Int> = intPreferencesKey("weekly_goal")
 
     fun useLbs(context: Context): Flow<Boolean> =
@@ -65,6 +70,41 @@ object UserPreferences {
 
     suspend fun setRecordsBackfilled(context: Context, done: Boolean) {
         context.dataStore.edit { prefs -> prefs[RECORDS_BACKFILLED] = done }
+    }
+
+    fun totalXp(context: Context): Flow<Long> =
+        context.dataStore.data.map { prefs -> prefs[TOTAL_XP] ?: 0L }
+
+    suspend fun setTotalXp(context: Context, xp: Long) {
+        context.dataStore.edit { prefs -> prefs[TOTAL_XP] = xp }
+    }
+
+    fun prestigeLevel(context: Context): Flow<Int> =
+        context.dataStore.data.map { prefs -> prefs[PRESTIGE_LEVEL] ?: 0 }
+
+    suspend fun setPrestigeLevel(context: Context, level: Int) {
+        context.dataStore.edit { prefs -> prefs[PRESTIGE_LEVEL] = level }
+    }
+
+    fun totalPrCount(context: Context): Flow<Long> =
+        context.dataStore.data.map { prefs -> prefs[TOTAL_PR_COUNT] ?: 0L }
+
+    suspend fun setTotalPrCount(context: Context, count: Long) {
+        context.dataStore.edit { prefs -> prefs[TOTAL_PR_COUNT] = count }
+    }
+
+    fun lastKnownStreak(context: Context): Flow<Int> =
+        context.dataStore.data.map { prefs -> prefs[LAST_KNOWN_STREAK] ?: 0 }
+
+    suspend fun setLastKnownStreak(context: Context, streak: Int) {
+        context.dataStore.edit { prefs -> prefs[LAST_KNOWN_STREAK] = streak }
+    }
+
+    fun gamificationBackfilled(context: Context): Flow<Boolean> =
+        context.dataStore.data.map { prefs -> prefs[GAMIFICATION_BACKFILLED] ?: false }
+
+    suspend fun setGamificationBackfilled(context: Context, done: Boolean) {
+        context.dataStore.edit { prefs -> prefs[GAMIFICATION_BACKFILLED] = done }
     }
 
     fun weeklyGoal(context: Context): Flow<Int> =

@@ -18,9 +18,10 @@ import kotlinx.coroutines.launch
         WorkoutTemplate::class,
         TemplateExercise::class,
         SessionExerciseOrder::class,
-        ExerciseRecord::class
+        ExerciseRecord::class,
+        UnlockedAchievement::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -29,6 +30,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun workoutDao(): WorkoutDao
     abstract fun templateDao(): TemplateDao
     abstract fun recordDao(): RecordDao
+    abstract fun achievementDao(): AchievementDao
 
     companion object {
         @Volatile private var INSTANCE: AppDatabase? = null
@@ -84,6 +86,19 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `unlocked_achievements` (
+                        `achievementId` TEXT NOT NULL,
+                        `unlockedDate` INTEGER NOT NULL,
+                        PRIMARY KEY(`achievementId`)
+                    )
+                    """.trimIndent()
+                )
+            }
+        }
 
 
 
@@ -112,7 +127,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "gymtracker.db"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                     .addCallback(object : Callback() {
                         override fun onCreate(db: SupportSQLiteDatabase) {
                             super.onCreate(db)
