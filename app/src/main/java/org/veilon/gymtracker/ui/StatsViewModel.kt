@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -110,4 +111,32 @@ class StatsViewModel(app: Application) : AndroidViewModel(app) {
         val fmt = SimpleDateFormat("MMM d", Locale.getDefault())
         return weekStarts.map { ws -> WeekPoint(fmt.format(Date(ws)), countByWeek.getValue(ws).toDouble()) }
     }
+
+    val muscleGroupVolume: StateFlow<List<WeekPoint>> = combine(
+        workoutDao.getAllSessions(),
+        workoutDao.getAllCompletedLogs(),
+        exerciseDao.getAll()
+    ) { sessions, logs, exercises ->
+        buildMuscleGroupVolume(sessions.associate { it.id to it.date }, logs, exercises)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private fun buildMuscleGroupVolume(
+        dateBySession: Map<Long, Long>,
+        logs: List<org.veilon.gymtracker.data.ExerciseLog>,
+        exercises: List<org.veilon.gymtracker.data.Exercise>
+    ): List<WeekPoint> {
+        val cutoff = System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000
+        val muscleGroupById = exercises.associate { it.id to it.muscleGroup }
+        val volumeByGroup = LinkedHashMap<String, Double>()
+        logs.forEach { log ->
+            val sessionDate = dateBySession[log.sessionId] ?: return@forEach
+            if (sessionDate < cutoff) return@forEach
+            val group = muscleGroupById[log.exerciseId] ?: return@forEach
+            volumeByGroup[group] = (volumeByGroup[group] ?: 0.0) + log.weight * log.reps
+        }
+        return volumeByGroup.entries
+            .sortedByDescending { it.value }
+            .map { WeekPoint(it.key, it.value) }
+    }
+
 }

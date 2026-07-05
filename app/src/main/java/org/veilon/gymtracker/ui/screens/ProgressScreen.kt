@@ -34,6 +34,7 @@ fun ProgressScreen(
     val useLbs by viewModel.useLbs.collectAsState()
     val weeklyVolume by viewModel.weeklyVolume.collectAsState()
     val weeklyFrequency by viewModel.weeklyFrequency.collectAsState()
+    val muscleGroupVolume by viewModel.muscleGroupVolume.collectAsState()
 
     var tab by remember { mutableStateOf(0) }
     var muscleFilter by remember { mutableStateOf("All") }
@@ -48,7 +49,7 @@ fun ProgressScreen(
         }
 
         when (tab) {
-            0 -> OverviewTab(weeklyVolume, weeklyFrequency, useLbs)
+            0 -> OverviewTab(weeklyVolume, weeklyFrequency, muscleGroupVolume, useLbs)
             else -> RecordsTab(
                 prs = prs,
                 useLbs = useLbs,
@@ -61,7 +62,12 @@ fun ProgressScreen(
 }
 
 @Composable
-private fun OverviewTab(weeklyVolume: List<WeekPoint>, weeklyFrequency: List<WeekPoint>, useLbs: Boolean) {
+private fun OverviewTab(
+    weeklyVolume: List<WeekPoint>,
+    weeklyFrequency: List<WeekPoint>,
+    muscleGroupVolume: List<WeekPoint>,
+    useLbs: Boolean
+) {
     val hasData = weeklyVolume.any { it.value > 0 } || weeklyFrequency.any { it.value > 0 }
 
     LazyColumn(
@@ -75,6 +81,24 @@ private fun OverviewTab(weeklyVolume: List<WeekPoint>, weeklyFrequency: List<Wee
                     Text(
                         "No workouts yet — finish one to see your trends here.",
                         color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+        if (muscleGroupVolume.isNotEmpty()) {
+            item {
+                val unit = if (useLbs) "lbs" else "kg"
+                SectionLabel("MUSCLE GROUP VOLUME · LAST 30 DAYS ($unit)")
+                Spacer(Modifier.height(8.dp))
+                val displayPoints = muscleGroupVolume.map { p ->
+                    p.copy(value = if (useLbs) p.value * 2.20462 else p.value)
+                }
+                Card(Modifier.fillMaxWidth()) {
+                    SimpleBarChart(
+                        data = displayPoints,
+                        modifier = Modifier.padding(16.dp),
+                        barColor = MaterialTheme.colorScheme.tertiary,
+                        valueFormatter = { v -> if (v >= 1000) "${(v / 1000).roundToInt()}k" else v.roundToInt().toString() }
                     )
                 }
             }
