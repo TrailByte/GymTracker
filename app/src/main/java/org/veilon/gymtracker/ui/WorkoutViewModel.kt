@@ -113,7 +113,7 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-        fun setRestDuration(seconds: Int) {
+    fun setRestDuration(seconds: Int) {
         _restDuration.value = seconds.coerceAtLeast(0)
     }
 
@@ -245,7 +245,14 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
             val session = workoutDao.getSession(sessionId)
             var durationSec: Long? = null
             if (session != null) {
-                durationSec = ((System.currentTimeMillis() - session.date) / 1000).coerceAtLeast(0)
+                // Round UP to the next whole second, not down. Duration is
+                // stored in whole seconds, but a PR's timestamp is stored to
+                // the millisecond — truncating down could leave the session's
+                // reconstructed end boundary up to 999ms EARLIER than a PR
+                // genuinely recorded at finish time, silently hiding the PR
+                // pill for something that really did just happen.
+                val elapsedMs = (System.currentTimeMillis() - session.date).coerceAtLeast(0)
+                durationSec = (elapsedMs + 999) / 1000
                 workoutDao.updateSession(session.copy(durationSeconds = durationSec))
             }
             UserPreferences.setRestEndsAt(appContext, null)
