@@ -14,21 +14,25 @@ class ExerciseLibraryViewModel(app: Application) : AndroidViewModel(app) {
     private val dao = AppDatabase.getInstance(app).exerciseDao()
 
     val muscleGroups = listOf("Chest", "Back", "Shoulders", "Legs", "Arms", "Core")
+    val equipmentTypes = listOf(
+        "Barbell", "Dumbbell", "Machine", "Cable", "Smith Machine",
+        "Bodyweight", "Kettlebell", "Resistance Band", "Other"
+    )
 
     val exercises = dao.getAllIncludingArchived()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    fun addExercise(name: String, muscleGroup: String) {
+    fun addExercise(name: String, muscleGroup: String, equipmentType: String) {
         if (name.isBlank()) return
         viewModelScope.launch {
-            dao.insert(Exercise(name = name.trim(), muscleGroup = muscleGroup))
+            dao.insert(Exercise(name = name.trim(), muscleGroup = muscleGroup, equipmentType = equipmentType))
         }
     }
 
-    fun updateExercise(exercise: Exercise, name: String, muscleGroup: String) {
+    fun updateExercise(exercise: Exercise, name: String, muscleGroup: String, equipmentType: String) {
         if (name.isBlank()) return
         viewModelScope.launch {
-            dao.update(exercise.copy(name = name.trim(), muscleGroup = muscleGroup))
+            dao.update(exercise.copy(name = name.trim(), muscleGroup = muscleGroup, equipmentType = equipmentType))
         }
     }
 

@@ -119,7 +119,7 @@ abstract class AppDatabase : RoomDatabase() {
         // Tested end-to-end against a real exported backup before shipping.
         private val MIGRATION_5_6 = object : Migration(5, 6) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                addColumnIfMissing(db, "exercises", "equipmentType", "TEXT NOT NULL DEFAULT 'Barbell'")
+                addColumnIfMissing(db, "exercises", "equipmentType", "TEXT NOT NULL DEFAULT 'Other'")
 
                 val renameAndTag = mapOf(
                     "Bicep Curl (Barbell)" to ("Bicep Curl" to "Barbell"),
@@ -188,10 +188,10 @@ abstract class AppDatabase : RoomDatabase() {
                 // leave two identical rows. Both are now named "Shoulder
                 // Press", so distinguish them by equipmentType: the loser
                 // was never touched by the rename map above and still holds
-                // the column's default ('Barbell'); the survivor was just
+                // the column's default ('Other'); the survivor was just
                 // explicitly set to 'Machine'. Matches what was verified
                 // against the real exported backup before writing this.
-                val loserId = queryExerciseIdByNameAndEquipment(db, "Shoulder Press", "Barbell")
+                val loserId = queryExerciseIdByNameAndEquipment(db, "Shoulder Press", "Other")
                 val survivorId = queryExerciseIdByNameAndEquipment(db, "Shoulder Press", "Machine")
                 if (loserId != null && survivorId != null && loserId != survivorId) {
                     mergeExercises(db, loserId, survivorId)
