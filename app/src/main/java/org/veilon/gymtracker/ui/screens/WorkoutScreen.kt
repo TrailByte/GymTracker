@@ -58,30 +58,12 @@ fun WorkoutScreen(
     val restForExerciseId by viewModel.restForExerciseId.collectAsState()
     val startTime by viewModel.startTime.collectAsState()
     val sessionName by viewModel.sessionName.collectAsState()
-    // A ticking "now" that updates every second while this screen is visible.
-    // Both elapsed and rest-remaining are computed from it, so they stay accurate
-    // across navigation/minimize.
-    var now by remember { mutableStateOf(System.currentTimeMillis()) }
-    val elapsed = startTime?.let { ((now - it) / 1000).toInt().coerceAtLeast(0) } ?: 0
-    // Remaining rest seconds, computed from the stored end timestamp (null = no rest)
-    val restRemaining: Int? = restEndsAt?.let {
-        val rem = ((it - now) / 1000).toInt()
-        if (rem > 0) rem else null
-    }
 
     var showExercisePicker by remember { mutableStateOf(false) }
     var showFinishDialog by remember { mutableStateOf(false) }
     var showCancelDialog by remember { mutableStateOf(false) }
     var showRestConfig by remember { mutableStateOf(false) }
     var exerciseToRemove by remember { mutableStateOf<Exercise?>(null) }
-    var restMenuOpen by remember { mutableStateOf(false) }
-
-    LaunchedEffect(Unit) {
-        while (true) {
-            now = System.currentTimeMillis()
-            delay(1000)
-        }
-    }
 
     if (showExercisePicker) {
         ExercisePickerDialog(
@@ -227,63 +209,14 @@ fun WorkoutScreen(
 
         Scaffold(
             topBar = {
-                @OptIn(ExperimentalMaterial3Api::class)
-                TopAppBar(
-                    title = {
-                        Column {
-                            Text(
-                                sessionName.uppercase(),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                formatElapsed(elapsed),
-                                style = MaterialTheme.typography.bodySmall,
-                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = onMinimize) {
-                            Icon(
-                                androidx.compose.material.icons.Icons.Default.KeyboardArrowDown,
-                                contentDescription = "Minimize"
-                            )
-                        }
-                    },
-                    actions = {
-                        if (restRemaining != null) {
-                            Box {
-                                RestPill(
-                                    remainingSeconds = restRemaining,
-                                    totalSeconds = restDuration,
-                                    onClick = { restMenuOpen = true }
-                                )
-                                DropdownMenu(
-                                    expanded = restMenuOpen,
-                                    onDismissRequest = { restMenuOpen = false }
-                                ) {
-                                    DropdownMenuItem(
-                                        text = { Text("+15 seconds") },
-                                        onClick = {
-                                            viewModel.addRestTime(15); restMenuOpen = false
-                                        }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("+30 seconds") },
-                                        onClick = {
-                                            viewModel.addRestTime(30); restMenuOpen = false
-                                        }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("Skip rest") },
-                                        onClick = { viewModel.skipRest(); restMenuOpen = false }
-                                    )
-                                }
-                            }
-                        }
-                    }
+                WorkoutTopBar(
+                    sessionName = sessionName,
+                    startTime = startTime,
+                    restEndsAt = restEndsAt,
+                    restDuration = restDuration,
+                    onMinimize = onMinimize,
+                    onAddRestTime = { viewModel.addRestTime(it) },
+                    onSkipRest = { viewModel.skipRest() }
                 )
             }
         ) { padding ->
@@ -381,6 +314,92 @@ fun WorkoutScreen(
             }
         }
     }
+
+/**
+ * Owns the ticking "now" state entirely on its own — WorkoutScreen's outer
+ * body no longer reads it at all. That means the per-second tick can only
+ * force THIS composable to recompose, never the exercise/set list below it,
+ * which used to sit in the same recomposition scope as the clock.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun WorkoutTopBar(
+    sessionName: String,
+    startTime: Long?,
+    restEndsAt: Long?,
+    restDuration: Int,
+    onMinimize: () -> Unit,
+    onAddRestTime: (Int) -> Unit,
+    onSkipRest: () -> Unit
+) {
+    var now by remember { mutableStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            now = System.currentTimeMillis()
+            delay(1000)
+        }
+    }
+    val elapsed = startTime?.let { ((now - it) / 1000).toInt().coerceAtLeast(0) } ?: 0
+    val restRemaining: Int? = restEndsAt?.let {
+        val rem = ((it - now) / 1000).toInt()
+        if (rem > 0) rem else null
+    }
+    var restMenuOpen by remember { mutableStateOf(false) }
+
+    TopAppBar(
+        title = {
+            Column {
+                Text(
+                    sessionName.uppercase(),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    formatElapsed(elapsed),
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        navigationIcon = {
+            IconButton(onClick = onMinimize) {
+                Icon(
+                    androidx.compose.material.icons.Icons.Default.KeyboardArrowDown,
+                    contentDescription = "Minimize"
+                )
+            }
+        },
+        actions = {
+            if (restRemaining != null) {
+                Box {
+                    RestPill(
+                        remainingSeconds = restRemaining,
+                        totalSeconds = restDuration,
+                        onClick = { restMenuOpen = true }
+                    )
+                    DropdownMenu(
+                        expanded = restMenuOpen,
+                        onDismissRequest = { restMenuOpen = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("+15 seconds") },
+                            onClick = { onAddRestTime(15); restMenuOpen = false }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("+30 seconds") },
+                            onClick = { onAddRestTime(30); restMenuOpen = false }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Skip rest") },
+                            onClick = { onSkipRest(); restMenuOpen = false }
+                        )
+                    }
+                }
+            }
+        }
+    )
+}
 
 @Composable
 fun ExerciseSetCard(

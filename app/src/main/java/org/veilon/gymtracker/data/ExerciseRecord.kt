@@ -1,5 +1,6 @@
 package org.veilon.gymtracker.data
 
+import androidx.compose.runtime.Immutable
 import androidx.room.Entity
 
 /**
@@ -9,6 +10,7 @@ import androidx.room.Entity
  * scan across history. Home's "Recent PRs", the Stats screen, and (later) the
  * Log-screen PR pill all read from this same table.
  */
+@Immutable
 @Entity(tableName = "exercise_records", primaryKeys = ["exerciseId"])
 data class ExerciseRecord(
     val exerciseId: Long,
