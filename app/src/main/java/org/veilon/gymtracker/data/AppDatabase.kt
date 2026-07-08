@@ -229,7 +229,7 @@ abstract class AppDatabase : RoomDatabase() {
                     """INSERT INTO exercise_records
                        (exerciseId, maxWeightKg, maxWeightReps, maxWeightDate, maxVolumeKg, maxVolumeWeightKg, maxVolumeReps, maxVolumeDate)
                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-                    arrayOf(
+                    arrayOf<Any>(
                         survivorId, merged.maxWeightKg, merged.maxWeightReps, merged.maxWeightDate,
                         merged.maxVolumeKg, merged.maxVolumeWeightKg, merged.maxVolumeReps, merged.maxVolumeDate
                     )
