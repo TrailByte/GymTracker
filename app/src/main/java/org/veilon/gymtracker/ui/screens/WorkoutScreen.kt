@@ -210,7 +210,7 @@ fun WorkoutScreen(
         AlertDialog(
             onDismissRequest = { exerciseToRemove = null },
             title = { Text("Remove exercise?") },
-            text = { Text("Remove ${ex.name} and all its sets from this workout?") },
+            text = { Text("Remove ${ex.name} (${ex.equipmentType}) and all its sets from this workout?") },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.deleteExercise(sessionId, ex.id)
@@ -407,7 +407,7 @@ fun ExerciseSetCard(
                     Column {
                         Text(exercise.name, fontWeight = FontWeight.SemiBold,
                             maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                        Text(exercise.muscleGroup, style = MaterialTheme.typography.bodySmall,
+                        Text("${exercise.muscleGroup} · ${exercise.equipmentType}", style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
@@ -658,11 +658,17 @@ fun ExercisePickerDialog(
                                 modifier = Modifier.fillMaxWidth(),
                                 color = MaterialTheme.colorScheme.surface
                             ) {
-                                Text(
-                                    ex.name,
+                                Column(
                                     modifier = Modifier.fillMaxWidth()
-                                        .padding(horizontal = 12.dp, vertical = 12.dp)
-                                )
+                                        .padding(horizontal = 12.dp, vertical = 10.dp)
+                                ) {
+                                    Text(ex.name)
+                                    Text(
+                                        ex.equipmentType,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
                         }
                     }

@@ -97,6 +97,7 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
             ExercisePR(
                 exerciseId = record.exerciseId,
                 exerciseName = exercise.name,
+                equipmentType = exercise.equipmentType,
                 muscleGroup = exercise.muscleGroup,
                 maxWeightKg = record.maxWeightKg,
                 maxWeightReps = record.maxWeightReps,

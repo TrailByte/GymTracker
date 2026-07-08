@@ -286,7 +286,7 @@ private fun StatsRecordCard(pr: ExercisePR, useLbs: Boolean, onClick: () -> Unit
                              else pr.maxWeightKg.roundToInt().toString()
             PlateBadge(value = plateValue)
             Column(Modifier.weight(1f)) {
-                Text(pr.exerciseName, fontWeight = FontWeight.SemiBold)
+                Text("${pr.exerciseName} (${pr.equipmentType})", fontWeight = FontWeight.SemiBold)
                 Text(
                     "Best set: ${pr.maxWeightReps}×${formatWeight(pr.maxWeightKg, useLbs)} · ${dateFmt.format(Date(pr.maxWeightDate))}",
                     style = MaterialTheme.typography.bodySmall,

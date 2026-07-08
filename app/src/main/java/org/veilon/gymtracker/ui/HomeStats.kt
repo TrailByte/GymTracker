@@ -4,6 +4,7 @@ package org.veilon.gymtracker.ui
 data class ExercisePR(
     val exerciseId: Long,
     val exerciseName: String,
+    val equipmentType: String,
     val muscleGroup: String,
     val maxWeightKg: Double,       // heaviest single set
     val maxWeightReps: Int,        // the reps performed at that weight

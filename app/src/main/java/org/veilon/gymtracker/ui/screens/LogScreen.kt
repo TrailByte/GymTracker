@@ -99,7 +99,7 @@ fun LogScreen(
                             ) {
                                 stats.exercises.forEach { line ->
                                     Text(
-                                        "${line.setCount}× ${line.name}",
+                                        "${line.setCount}× ${line.name} (${line.equipmentType})",
                                         style = MaterialTheme.typography.bodySmall,
                                         fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
                                     )

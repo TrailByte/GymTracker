@@ -10,7 +10,7 @@ import org.veilon.gymtracker.data.AppDatabase
 import org.veilon.gymtracker.data.WorkoutSession
 import kotlinx.coroutines.launch
 
-data class ExerciseLine(val name: String, val setCount: Int)
+data class ExerciseLine(val name: String, val equipmentType: String, val setCount: Int)
 
 data class SessionStats(
     val exercises: List<ExerciseLine>,
@@ -34,22 +34,19 @@ class LogViewModel(app: Application) : AndroidViewModel(app) {
     val useLbs = UserPreferences.useLbs(app)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
-    private val orderAndRecords = combine(
-        workoutDao.getAllExerciseOrder(),
-        recordDao.getAllRecords()
-    ) { allOrder, records -> allOrder to records }
-
     val state = combine(
         workoutDao.getAllSessions(),
         workoutDao.getAllLogs(),
         exerciseDao.getAllIncludingArchived(),
         UserPreferences.activeSession(app),
-        orderAndRecords
-    ) { sessions, allLogs, exercises, activeId, (allOrder, records) ->
+        workoutDao.getAllExerciseOrder(),
+        recordDao.getAllRecords()
+    ) { sessions, allLogs, exercises, activeId, allOrder, records ->
         val active = sessions.find { it.id == activeId }
         val history = sessions.filter { it.id != activeId }
 
         val nameById = exercises.associate { it.id to it.name }
+        val equipmentById = exercises.associate { it.id to it.equipmentType }
         val logsBySession = allLogs.groupBy { it.sessionId }
         val orderBySession = allOrder.groupBy { it.sessionId }
         val sessionById = sessions.associateBy { it.id }
@@ -67,6 +64,7 @@ class LogViewModel(app: Application) : AndroidViewModel(app) {
             val lines = orderedIds.map { exId ->
                 ExerciseLine(
                     name = nameById[exId] ?: "Unknown",
+                    equipmentType = equipmentById[exId] ?: "",
                     setCount = logs.count { it.exerciseId == exId }
                 )
             }

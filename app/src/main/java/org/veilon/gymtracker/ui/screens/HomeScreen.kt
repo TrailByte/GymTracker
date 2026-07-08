@@ -184,7 +184,7 @@ private fun PRCard(pr: ExercisePR, useLbs: Boolean) {
             else pr.maxWeightKg.roundToInt().toString()
             PlateBadge(value = plateValue)
             Column(Modifier.weight(1f)) {
-                Text(pr.exerciseName, fontWeight = FontWeight.SemiBold)
+                Text("${pr.exerciseName} (${pr.equipmentType})", fontWeight = FontWeight.SemiBold)
                 Text("Best set: ${formatWeight(pr.maxWeightKg, useLbs)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)

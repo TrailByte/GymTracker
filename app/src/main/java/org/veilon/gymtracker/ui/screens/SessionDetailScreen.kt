@@ -132,9 +132,11 @@ fun SessionDetailScreen(
                             ) {
                                 Column {
                                     Text(exercise?.name ?: "Unknown", fontWeight = FontWeight.SemiBold)
-                                    Text(exercise?.muscleGroup ?: "",
+                                    Text(
+                                        "${exercise?.muscleGroup ?: ""} · ${exercise?.equipmentType ?: ""}",
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                                 }
                                 if (prInfo != null) {
                                     Surface(

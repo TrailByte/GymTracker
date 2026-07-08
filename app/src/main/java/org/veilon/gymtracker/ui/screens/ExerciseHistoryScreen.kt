@@ -51,6 +51,7 @@ fun ExerciseHistoryScreen(
     LaunchedEffect(exerciseId) { viewModel.setExerciseId(exerciseId) }
 
     val name by viewModel.exerciseName.collectAsState()
+    val equipment by viewModel.exerciseEquipment.collectAsState()
     val history by viewModel.history.collectAsState()
     val useLbs by viewModel.useLbs.collectAsState()
     var selectedRange by remember { mutableStateOf(TimeRange.ALL) }
@@ -58,7 +59,7 @@ fun ExerciseHistoryScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(name.uppercase()) },
+                title = { Text("${name.uppercase()} (${equipment.uppercase()})") },
                 navigationIcon = { TextButton(onClick = onBack) { Text("Back") } }
             )
         }

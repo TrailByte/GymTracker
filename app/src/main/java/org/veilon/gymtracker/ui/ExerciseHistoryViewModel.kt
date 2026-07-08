@@ -44,6 +44,12 @@ class ExerciseHistoryViewModel(app: Application) : AndroidViewModel(app) {
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
 
     @OptIn(ExperimentalCoroutinesApi::class)
+    val exerciseEquipment: StateFlow<String> = _exerciseId.flatMapLatest { id ->
+        if (id == null) flowOf("")
+        else exerciseDao.getAllIncludingArchived().map { list -> list.find { it.id == id }?.equipmentType ?: "" }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+
+    @OptIn(ExperimentalCoroutinesApi::class)
     private val logsForExercise = _exerciseId.flatMapLatest { id ->
         if (id == null) flowOf(emptyList())
         else workoutDao.getCompletedLogsForExercise(id)
