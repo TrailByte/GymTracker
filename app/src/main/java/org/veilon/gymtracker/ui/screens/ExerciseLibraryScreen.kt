@@ -150,100 +150,100 @@ fun ExerciseLibraryScreen(
             LazyColumn(
                 modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
-                contentPadding = PaddingValues(vertical = 16.dp)
+                contentPadding = PaddingValues(top = 16.dp, bottom = 96.dp)
             ) {
                 if (grouped.isEmpty()) {
-                    item {
-                        Box(Modifier.fillMaxWidth().padding(top = 32.dp), contentAlignment = Alignment.Center) {
-                            Text("No exercises match.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
+                item {
+                    Box(Modifier.fillMaxWidth().padding(top = 32.dp), contentAlignment = Alignment.Center) {
+                        Text("No exercises match.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-                grouped.forEach { (group, list) ->
-                    item {
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                            shape = MaterialTheme.shapes.small
-                        ) {
-                            Text(
-                                group.uppercase(),
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)
-                            )
-                        }
-                    }
-                    items(list, key = { it.id }) { ex ->
-                        Card(modifier = Modifier.fillMaxWidth()) {
-                            Row(
-                                modifier = Modifier.padding(12.dp).fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(ex.name)
-                                    Text(
-                                        ex.equipmentType,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                                IconButton(onClick = { editing = ex; showAddEdit = true }) {
-                                    Icon(Icons.Default.Edit, contentDescription = "Edit")
-                                }
-                                TextButton(onClick = {
-                                    viewModel.removeExercise(
-                                        ex,
-                                        onBlocked = { blockedExercise = ex },
-                                        onDeleted = { }
-                                    )
-                                }) {
-                                    Text("Remove")
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if (archived.isNotEmpty()) {
-                    item {
-                        Spacer(Modifier.height(8.dp))
+            }
+            grouped.forEach { (group, list) ->
+                item {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        shape = MaterialTheme.shapes.small
+                    ) {
                         Text(
-                            "ARCHIVED",
+                            group.uppercase(),
                             style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            "Hidden from pickers, history preserved",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)
                         )
                     }
-                    items(archived, key = { it.id }) { ex ->
-                        Card(modifier = Modifier.fillMaxWidth()) {
-                            Row(
-                                modifier = Modifier.padding(12.dp).fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(ex.name, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text(
-                                        "${ex.muscleGroup} · ${ex.equipmentType}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                                TextButton(onClick = { viewModel.restoreExercise(ex) }) {
-                                    Text("Restore")
-                                }
+                }
+                items(list, key = { it.id }) { ex ->
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(ex.name)
+                                Text(
+                                    ex.equipmentType,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            IconButton(onClick = { editing = ex; showAddEdit = true }) {
+                                Icon(Icons.Default.Edit, contentDescription = "Edit")
+                            }
+                            TextButton(onClick = {
+                                viewModel.removeExercise(
+                                    ex,
+                                    onBlocked = { blockedExercise = ex },
+                                    onDeleted = { }
+                                )
+                            }) {
+                                Text("Remove")
                             }
                         }
                     }
                 }
             }
+
+            if (archived.isNotEmpty()) {
+                item {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "ARCHIVED",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        "Hidden from pickers, history preserved",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                items(archived, key = { it.id }) { ex ->
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(ex.name, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(
+                                    "${ex.muscleGroup} · ${ex.equipmentType}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            TextButton(onClick = { viewModel.restoreExercise(ex) }) {
+                                Text("Restore")
+                            }
+                        }
+                    }
+                }
+            }
+        }
         }
     }
 }
