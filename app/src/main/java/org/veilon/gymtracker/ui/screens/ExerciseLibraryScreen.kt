@@ -35,11 +35,12 @@ fun ExerciseLibraryScreen(
         ExerciseEditDialog(
             existing = editing,
             muscleGroups = viewModel.muscleGroups,
+            equipmentTypes = viewModel.equipmentTypes,
             onDismiss = { showAddEdit = false; editing = null },
-            onConfirm = { name, group ->
+            onConfirm = { name, group, equipment ->
                 val current = editing
-                if (current == null) viewModel.addExercise(name, group)
-                else viewModel.updateExercise(current, name, group)
+                if (current == null) viewModel.addExercise(name, group, equipment)
+                else viewModel.updateExercise(current, name, group, equipment)
                 showAddEdit = false; editing = null
             }
         )
@@ -78,15 +79,18 @@ fun ExerciseLibraryScreen(
         }
     ) { padding ->
         var searchQuery by remember { mutableStateOf("") }
-        var selectedFilter by remember { mutableStateOf("All") }
+        var selectedMuscleFilter by remember { mutableStateOf("All") }
+        var selectedEquipmentFilter by remember { mutableStateOf("All") }
 
         val active = exercises.filter { !it.archived }
         val archived = exercises.filter { it.archived }
 
-        val byFilter = if (selectedFilter == "All") active
-        else active.filter { it.muscleGroup == selectedFilter }
-        val filtered = if (searchQuery.isBlank()) byFilter
-        else byFilter.filter { it.name.contains(searchQuery, ignoreCase = true) }
+        val byMuscle = if (selectedMuscleFilter == "All") active
+        else active.filter { it.muscleGroup == selectedMuscleFilter }
+        val byEquipment = if (selectedEquipmentFilter == "All") byMuscle
+        else byMuscle.filter { it.equipmentType == selectedEquipmentFilter }
+        val filtered = if (searchQuery.isBlank()) byEquipment
+        else byEquipment.filter { it.name.contains(searchQuery, ignoreCase = true) }
         val grouped = filtered.groupBy { it.muscleGroup }
 
         Column(Modifier.fillMaxSize().padding(padding)) {
@@ -99,7 +103,7 @@ fun ExerciseLibraryScreen(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
             )
 
-            // Muscle-group filter chips — fixed, horizontally scrollable
+            // Muscle-group filter chips
             LazyRow(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -107,16 +111,38 @@ fun ExerciseLibraryScreen(
             ) {
                 item {
                     FilterChip(
-                        selected = selectedFilter == "All",
-                        onClick = { selectedFilter = "All" },
+                        selected = selectedMuscleFilter == "All",
+                        onClick = { selectedMuscleFilter = "All" },
                         label = { Text("All") }
                     )
                 }
                 items(viewModel.muscleGroups) { mg ->
                     FilterChip(
-                        selected = selectedFilter == mg,
-                        onClick = { selectedFilter = mg },
+                        selected = selectedMuscleFilter == mg,
+                        onClick = { selectedMuscleFilter = mg },
                         label = { Text(mg) }
+                    )
+                }
+            }
+
+            // Equipment filter chips — second row, combines with muscle group (AND)
+            LazyRow(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(vertical = 4.dp)
+            ) {
+                item {
+                    FilterChip(
+                        selected = selectedEquipmentFilter == "All",
+                        onClick = { selectedEquipmentFilter = "All" },
+                        label = { Text("All Equipment") }
+                    )
+                }
+                items(viewModel.equipmentTypes) { eq ->
+                    FilterChip(
+                        selected = selectedEquipmentFilter == eq,
+                        onClick = { selectedEquipmentFilter = eq },
+                        label = { Text(eq) }
                     )
                 }
             }
@@ -156,7 +182,14 @@ fun ExerciseLibraryScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(ex.name, modifier = Modifier.weight(1f))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(ex.name)
+                                    Text(
+                                        ex.equipmentType,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                                 IconButton(onClick = { editing = ex; showAddEdit = true }) {
                                     Icon(Icons.Default.Edit, contentDescription = "Edit")
                                 }
@@ -198,7 +231,7 @@ fun ExerciseLibraryScreen(
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(ex.name, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     Text(
-                                        ex.muscleGroup,
+                                        "${ex.muscleGroup} · ${ex.equipmentType}",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -220,11 +253,13 @@ fun ExerciseLibraryScreen(
 private fun ExerciseEditDialog(
     existing: Exercise?,
     muscleGroups: List<String>,
+    equipmentTypes: List<String>,
     onDismiss: () -> Unit,
-    onConfirm: (name: String, group: String) -> Unit
+    onConfirm: (name: String, group: String, equipment: String) -> Unit
 ) {
     var name by remember { mutableStateOf(existing?.name ?: "") }
     var group by remember { mutableStateOf(existing?.muscleGroup ?: muscleGroups.first()) }
+    var equipment by remember { mutableStateOf(existing?.equipmentType ?: equipmentTypes.first()) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -256,10 +291,24 @@ private fun ExerciseEditDialog(
                         }
                     }
                 }
+                Text("Equipment", style = MaterialTheme.typography.labelMedium)
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    equipmentTypes.chunked(2).forEach { rowTypes ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            rowTypes.forEach { eq ->
+                                FilterChip(
+                                    selected = equipment == eq,
+                                    onClick = { equipment = eq },
+                                    label = { Text(eq) }
+                                )
+                            }
+                        }
+                    }
+                }
             }
         },
         confirmButton = {
-            TextButton(onClick = { if (name.isNotBlank()) onConfirm(name.trim(), group) }) {
+            TextButton(onClick = { if (name.isNotBlank()) onConfirm(name.trim(), group, equipment) }) {
                 Text("Save")
             }
         },
