@@ -34,14 +34,18 @@ class LogViewModel(app: Application) : AndroidViewModel(app) {
     val useLbs = UserPreferences.useLbs(app)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
+    private val orderAndRecords = combine(
+        workoutDao.getAllExerciseOrder(),
+        recordDao.getAllRecords()
+    ) { allOrder, records -> allOrder to records }
+
     val state = combine(
         workoutDao.getAllSessions(),
         workoutDao.getAllLogs(),
         exerciseDao.getAllIncludingArchived(),
         UserPreferences.activeSession(app),
-        workoutDao.getAllExerciseOrder(),
-        recordDao.getAllRecords()
-    ) { sessions, allLogs, exercises, activeId, allOrder, records ->
+        orderAndRecords
+    ) { sessions, allLogs, exercises, activeId, (allOrder, records) ->
         val active = sessions.find { it.id == activeId }
         val history = sessions.filter { it.id != activeId }
 
