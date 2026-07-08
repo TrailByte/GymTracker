@@ -136,11 +136,11 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
     fun updateSet(log: ExerciseLog, reps: Int, weightKg: Double) {
         viewModelScope.launch {
             workoutDao.updateLog(log.copy(reps = reps, weight = weightKg))
-            // If this set was already marked complete, an edited value could
-            // newly set (or raise) a record — check it too, not just on toggle.
-            if (log.completed) {
-                updateRecordIfBetter(log.exerciseId, weightKg, reps)
-            }
+            // PR/XP detection no longer happens here — see finishWorkout(). Doing
+            // it live, on every edit, was exploitable: editing an already-
+            // completed set's weight fires onValueChange per keystroke, and any
+            // intermediate value that momentarily exceeded the stored record
+            // would bank its own separate XP award. Real bug, found in the wild.
         }
     }
 
@@ -149,7 +149,6 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
             val nowComplete = !log.completed
             workoutDao.updateLog(log.copy(completed = nowComplete))
             if (nowComplete) {
-                updateRecordIfBetter(log.exerciseId, log.weight, log.reps)
                 val endsAt = System.currentTimeMillis() + _restDuration.value * 1000L
                 UserPreferences.setRestEndsAt(appContext, endsAt)
                 _restForExerciseId.value = log.exerciseId
@@ -158,20 +157,24 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    // Checks a completed set's weight and volume against the stored record for
-    // this exercise, and updates whichever (or both) it newly beats. O(1) —
-    // one read, one write, never a scan.
-    private suspend fun updateRecordIfBetter(exerciseId: Long, weight: Double, reps: Int): Int {
+    // Checks one exercise's best-weight and best-volume set (which may be the
+    // same set or different ones) against its stored record, updating whichever
+    // it beats. Pure persistence — does NOT award XP itself; the caller
+    // aggregates improvements across the whole workout and awards once.
+    private suspend fun applyRecordIfBetter(
+        exerciseId: Long,
+        weightLog: ExerciseLog,
+        volumeLog: ExerciseLog
+    ): Int {
         val whenAchieved = System.currentTimeMillis()
         val existing = recordDao.getRecord(exerciseId)
-        val volume = weight * reps
         var improvements = 0
 
         var maxWeightKg = existing?.maxWeightKg ?: 0.0
         var maxWeightReps = existing?.maxWeightReps ?: 0
         var maxWeightDate = existing?.maxWeightDate ?: whenAchieved
-        if (weight > maxWeightKg) {
-            maxWeightKg = weight; maxWeightReps = reps; maxWeightDate = whenAchieved
+        if (weightLog.weight > maxWeightKg) {
+            maxWeightKg = weightLog.weight; maxWeightReps = weightLog.reps; maxWeightDate = whenAchieved
             improvements++
         }
 
@@ -179,8 +182,10 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
         var maxVolumeWeightKg = existing?.maxVolumeWeightKg ?: 0.0
         var maxVolumeReps = existing?.maxVolumeReps ?: 0
         var maxVolumeDate = existing?.maxVolumeDate ?: whenAchieved
-        if (volume > maxVolumeKg) {
-            maxVolumeKg = volume; maxVolumeWeightKg = weight; maxVolumeReps = reps; maxVolumeDate = whenAchieved
+        val candidateVolume = volumeLog.weight * volumeLog.reps
+        if (candidateVolume > maxVolumeKg) {
+            maxVolumeKg = candidateVolume; maxVolumeWeightKg = volumeLog.weight
+            maxVolumeReps = volumeLog.reps; maxVolumeDate = whenAchieved
             improvements++
         }
 
@@ -197,9 +202,6 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
             )
         )
 
-        if (improvements > 0) {
-            GamificationEngine.onPrBroken(appContext, improvements)
-        }
         return improvements
     }
 
@@ -222,6 +224,24 @@ class WorkoutViewModel(app: Application) : AndroidViewModel(app) {
                     workoutDao.updateLog(it.copy(completed = true))
                 }
             }
+
+            // PR detection happens exactly once here, from the FINAL completed
+            // state of the workout — not live during editing (see updateSet/
+            // toggleComplete for why that was exploitable). Bounded to however
+            // many distinct exercises are in THIS session, not a history scan.
+            val finalLogs = workoutDao.getLogsForSessionOnce(sessionId).filter { it.completed }
+            var totalPrImprovements = 0
+            finalLogs.groupBy { it.exerciseId }.forEach { (exerciseId, exLogs) ->
+                val bestWeightLog = exLogs.maxByOrNull { it.weight }
+                val bestVolumeLog = exLogs.maxByOrNull { it.weight * it.reps }
+                if (bestWeightLog != null && bestVolumeLog != null) {
+                    totalPrImprovements += applyRecordIfBetter(exerciseId, bestWeightLog, bestVolumeLog)
+                }
+            }
+            if (totalPrImprovements > 0) {
+                GamificationEngine.onPrBroken(appContext, totalPrImprovements)
+            }
+
             val session = workoutDao.getSession(sessionId)
             var durationSec: Long? = null
             if (session != null) {
