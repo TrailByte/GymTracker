@@ -42,14 +42,44 @@ A running checklist of what's done and what's outstanding. Edit freely.
 - [ ] **Background timer / notification (future)** — a live workout/rest timer in
   the notification shade while the app is backgrounded, like dedicated timer apps.
   Needs a foreground Service + notifications. Larger feature; only if wanted.
-- [ ] **Progress / Stats charts** — per-exercise weight-over-time line chart.
-  Stats tab is still a placeholder.
-  TRAP: filter logs by exercise id with stable flatMapLatest + setCurrentX().
-- [ ] **Levels & Achievements (gamification)** — slots into the Profile hub header.
-  NEEDS A SCOPING PASS — what grants XP, level curve, achievement set, schema,
-  visuals (ties into plate-badge motif).
+- [x] **Progress / Stats charts — DONE.** Two-tab dashboard (Overview: muscle-group
+  volume, weekly volume, workouts/week; Records: every exercise's PR, grouped,
+  filterable). Per-exercise trend screen with interactive tap/drag Canvas line
+  charts, Y-axis always starts at 0, max/min labels in a dedicated left column
+  (not overlapping the line), and a 7D/30D/1Y/All time-range filter.
+- [x] **Levels & Achievements (gamification) — DONE, full arc.** XP (workout
+  completion, PRs, streak extensions), level curve (50×L×(L-1) to reach level L,
+  capped at 30/season), optional Prestige (permanent ★ badge shown regardless of
+  active theme, resets level not lifetime stats), 33 achievements across 4
+  categories shown as a tappable badge grid with detail dialogs, animated
+  full-screen celebrations (workout-finished/level-up/achievement, queued not
+  stacked). Historical backfill replays real past PRs/workouts/streaks — fixed
+  once after an XP-recompute bug was caught by the user, then re-verified.
+- [x] **Unlockable themes — DONE.** Five dark-only tiers (Bronze/Steel/Gold/
+  Obsidian/Prestige) beyond the default Iron & Chalk, each color scheme
+  contrast-verified with real WCAG math (not eyeballed) after light-mode and
+  glow issues surfaced. Settings picker shows locked tiers greyed with their
+  unlock level. Light mode was tried and then deliberately dropped entirely —
+  every theme, including default, is dark-only now.
+- [x] **Backup & Restore — DONE.** Settings → Data section. Export zips the DB
+  (WAL-checkpointed first) + meaningful DataStore prefs (units, rest default,
+  weekly goal, selected theme, XP/prestige/PR-count) via the native "Save As"
+  picker. Import is a full replace (not a merge) via the native file picker,
+  requires an app restart after (every live ViewModel holds a DAO reference
+  bound to the connection that gets closed/swapped). Gamification state is
+  backed up explicitly, not left to re-derive from restored history — that
+  would have silently erased Prestige status on import.
+- [x] **#12 PR pill — DONE, not just parked anymore.** Finishing a workout now
+  shows a real congrats celebration and lands on that session's detail screen
+  (not the dashboard) specifically so PRs are immediately visible. Shows WHICH
+  kind of PR (weight/volume/both) with real numbers, not just a flag — on the
+  Session Detail screen, the Log screen's history cards, Home's Recent PRs, and
+  the Stats Records tab (Log + SessionDetail pills deliberately kept subtle:
+  low-alpha tint, no emoji, after the first version read as "too much glow").
+- [x] **Equipment/modality categorization — DONE** (see full section below;
+  the open-questions list that followed this item is now resolved/built).
 - [ ] **UI friction**:
-  - "Stuttery sometimes" — undiagnosed; pin down WHEN before fixing.
+  - "Stuttery sometimes" — still undiagnosed; pin down WHEN before fixing.
   - Start-Workout choice (Empty/From Template) cramped AlertDialog → bottom sheet.
   - Settings & Library "Back" text button → proper back arrow icon.
 
@@ -92,9 +122,9 @@ Grouped by size. Order TBD.
 - [x] #3  Rest duration picker — replaced steppers with an iPhone-style scroll
   wheel (minutes 0-10, seconds in 10s steps). DIY snap-scroll, no dependency.
 - [ ] #6  Remove and edit past workouts (from the Log/SessionDetail screen).
-- [~] #12 STILL PARKED for the Log-screen pill specifically, but the stored-PR
-  system it was waiting on is now BUILT (see Stats section below) — wiring the
-  pill itself is now a small follow-up, not a redesign.
+  (Delete is done; edit — reopening a finished session to change it — isn't.)
+- [x] #12 DONE — see the top-level "#12 PR pill" entry near the top of this
+  file for the full writeup; this line kept only so numbering isn't confusing.
 - [x] #13 Workout history card stats: per-exercise sets, total volume, duration.
 - [ ] #9  Scroll lag in the workout screen (THE "stuttery" item — needs profiling;
   likely the inline OutlinedTextFields recomposing, or unstable list keys).
@@ -225,26 +255,29 @@ Two different, easily-confused ideas — keep them separate:
   A second categorization axis alongside the existing muscleGroup, purely for
   organizing/filtering the library — doesn't change how sets are logged.
 
-### Scope / open decisions for when we build this
-- [ ] Schema: new field on `Exercise` (e.g. `equipmentType: String`) — needs a
-  migration (new column, defensive addColumnIfMissing pattern like before).
-- [ ] Decide the exact category list up front (Machine / Cable / Dumbbell /
-  Barbell / Bodyweight / others?) — probably a fixed set, similar to how
-  muscleGroup works, not free-text.
-- [ ] Backfill existing 41 seed exercises: many ALREADY hint at equipment in
-  their names via parenthetical suffixes (e.g. "Bicep Curl (Dumbbell)",
-  "Bench Press (Smith)", "Triceps Pushdown (Cable - Rope)") — likely can
-  semi-automate assignment by parsing these rather than doing all 41 by hand.
-  Exercises with no hint (e.g. plain "Squat", "Pull-Up", "Plank") need a
-  manual/sensible-default assignment.
-- [ ] UI: Exercise Library add/edit dialog needs an equipment-type selector
-  (chips, like the existing muscle-group chips).
-- [ ] UI: Library filtering — currently filters by muscle-group chips only
-  (built earlier for search). Decide: add equipment as a SECOND filter row,
-  or a combined filter, or a toggle between "by muscle" / "by equipment" views.
-- [ ] UI: the in-workout exercise picker (sectioned by muscle group currently)
-  — should it also filter/section by equipment? Or leave that picker as-is
-  and only add equipment filtering to the Library screen?
-- [ ] "Populate exercises" — expand the seed catalog further (beyond current
-  41), likely organized/tagged using this new dimension once the category
-  list is decided, so new seeds come in with equipment already assigned.
+### Scope / open decisions for when we build this — ALL DECIDED AND BUILT
+- [x] Schema: `equipmentType: String` on `Exercise`, migration adds the column
+  (defensive default, changed from an arbitrary "Barbell" to an honest "Other"
+  after review) plus a full rename+merge (not just tag) once it turned out
+  equipment had been hand-encoded into names as a workaround — tested against
+  a real exported backup before shipping, including a genuine data merge
+  (two "Shoulder Press" entries collapsed into one, history preserved) with a
+  session_exercise_order primary-key collision case handled defensively.
+- [x] Category list: Barbell, Dumbbell, Machine, Cable, Smith Machine,
+  Bodyweight, Kettlebell, Resistance Band, plus a 9th "Other" catch-all added
+  after realizing equipment that fits none of the 8 needed an honest option.
+- [x] Backfill: hand-classified (not fuzzy-matched) against the real exercise
+  list, including grip/unilateral/attachment distinctions that AREN'T
+  equipment (e.g. "Seated Row (Wide grip)" kept as-is, not collapsed).
+- [x] UI: add/edit dialog has an equipment chip-picker alongside muscle group.
+- [x] UI: Library filtering — equipment is a SECOND filter row, combines with
+  muscle group (AND logic).
+- [x] UI: the in-workout exercise picker DOES show/filter by equipment too —
+  turned out to be essential, not optional, once names stopped being unique
+  (two "Incline Bench Press" entries are indistinguishable without it). This
+  fanned out further than expected: 12 places across 9 files needed the same
+  fix once names could collide (workout screen x3, session/template detail,
+  log history cards, exercise trend title, Home Recent PRs, Stats Records).
+- [ ] "Populate exercises" — the categorization is fully done, but actually
+  EXPANDING the seed catalog with new exercises (the other half of the
+  original ask) hasn't happened yet. Still open if wanted.
