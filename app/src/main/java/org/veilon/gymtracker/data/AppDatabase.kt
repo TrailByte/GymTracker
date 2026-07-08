@@ -21,7 +21,7 @@ import kotlinx.coroutines.launch
         ExerciseRecord::class,
         UnlockedAchievement::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -110,6 +110,176 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Equipment used to be hand-encoded into the exercise NAME (e.g.
+        // "Lateral Raise (Dumbbell)") since there was nowhere else to put it.
+        // Now it has a real field: rename+tag strips the equipment part of
+        // the name and sets equipmentType instead. Parentheticals that
+        // encode something ELSE (grip, unilateral, attachment) are
+        // deliberately preserved — only pure-equipment suffixes are stripped.
+        // Tested end-to-end against a real exported backup before shipping.
+        private val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                addColumnIfMissing(db, "exercises", "equipmentType", "TEXT NOT NULL DEFAULT 'Barbell'")
+
+                val renameAndTag = mapOf(
+                    "Bicep Curl (Barbell)" to ("Bicep Curl" to "Barbell"),
+                    "Bicep Curl (Cable)" to ("Bicep Curl" to "Cable"),
+                    "Bicep Curl (Dumbbell)" to ("Bicep Curl" to "Dumbbell"),
+                    "Hammer Curl" to ("Hammer Curl" to "Dumbbell"),
+                    "Hammer Curl (Cable)" to ("Hammer Curl" to "Cable"),
+                    "Incline Curl (Dumbbell)" to ("Incline Curl" to "Dumbbell"),
+                    "Preacher Curl (Machine)" to ("Preacher Curl" to "Machine"),
+                    "Skull Crusher" to ("Skull Crusher" to "Barbell"),
+                    "Tricep Pushdown" to ("Tricep Pushdown" to "Cable"),
+                    "Tricep Pushdown (Cable - Rope - Vision)" to ("Tricep Pushdown (Rope)" to "Cable"),
+                    "Triceps Extension" to ("Triceps Extension" to "Dumbbell"),
+                    "Triceps Pushdown (Cable - Rope)" to ("Triceps Pushdown (Rope)" to "Cable"),
+                    "Bent Over Row (Barbell)" to ("Bent Over Row" to "Barbell"),
+                    "Bent Over Row - Underhand (Barbell)" to ("Bent Over Row - Underhand" to "Barbell"),
+                    "Lat Pulldown" to ("Lat Pulldown" to "Cable"),
+                    "Lat pulldown neutral grip (Cable)" to ("Lat pulldown neutral grip" to "Cable"),
+                    "Pull-Up" to ("Pull-Up" to "Bodyweight"),
+                    "Seated Row (Close Neutral Grip)" to ("Seated Row (Close Neutral Grip)" to "Cable"),
+                    "Seated Row (Wide grip)" to ("Seated Row (Wide grip)" to "Cable"),
+                    "Bench Press" to ("Bench Press" to "Barbell"),
+                    "Bench Press (Smith)" to ("Bench Press" to "Smith Machine"),
+                    "Cable Fly" to ("Cable Fly" to "Cable"),
+                    "Chest Fly (Machine)" to ("Chest Fly" to "Machine"),
+                    "Incline Bench Press" to ("Incline Bench Press" to "Barbell"),
+                    "Incline Bench Press (Dumbbell)" to ("Incline Bench Press" to "Dumbbell"),
+                    "Incline Bench Press (Smith)" to ("Incline Bench Press" to "Smith Machine"),
+                    "Incline Chest Press (Machine)" to ("Incline Chest Press" to "Machine"),
+                    "Incline Press" to ("Incline Press" to "Machine"),
+                    "Iso-Lateral Chest Press (Machine)" to ("Iso-Lateral Chest Press" to "Machine"),
+                    "Weighted Chest Dips" to ("Weighted Chest Dips" to "Bodyweight"),
+                    "Cable Crunch" to ("Cable Crunch" to "Cable"),
+                    "Crunch (Machine)" to ("Crunch" to "Machine"),
+                    "Plank" to ("Plank" to "Bodyweight"),
+                    "Weighted Planks" to ("Weighted Planks" to "Bodyweight"),
+                    "Back Squat" to ("Back Squat" to "Barbell"),
+                    "Deadlift" to ("Deadlift" to "Barbell"),
+                    "Hip Thrust (Machine)" to ("Hip Thrust" to "Machine"),
+                    "Leg Press" to ("Leg Press" to "Machine"),
+                    "Romanian Deadlift" to ("Romanian Deadlift" to "Barbell"),
+                    "Seated Calf Raise (Plate Loaded)" to ("Seated Calf Raise" to "Machine"),
+                    "Seated Leg Curl (One leg)" to ("Seated Leg Curl (One leg)" to "Machine"),
+                    "Squat" to ("Squat" to "Barbell"),
+                    "Face Pull" to ("Face Pull" to "Cable"),
+                    "Lateral Raise (Dumbbell)" to ("Lateral Raise" to "Dumbbell"),
+                    "Lateral Raise (Machine)" to ("Lateral Raise" to "Machine"),
+                    "Overhead Press (Barbell)" to ("Overhead Press" to "Barbell"),
+                    "Overhead Press (Dumbbell)" to ("Overhead Press" to "Dumbbell"),
+                    "Seated Overhead Press (Barbell)" to ("Seated Overhead Press" to "Barbell"),
+                    "Seated Overhead Press (Dumbell)" to ("Seated Overhead Press" to "Dumbbell"),
+                    "Shoulder Press (Machine)" to ("Shoulder Press" to "Machine"),
+                    "Shrugs (Dumbbells)" to ("Shrugs" to "Dumbbell")
+                )
+                renameAndTag.forEach { (oldName, newNameAndEquipment) ->
+                    val (newName, equipment) = newNameAndEquipment
+                    db.execSQL(
+                        "UPDATE exercises SET name = ?, equipmentType = ? WHERE name = ?",
+                        arrayOf(newName, equipment, oldName)
+                    )
+                }
+
+                // Plain "Shoulder Press" and "Shoulder Press (Machine)" become
+                // an exact duplicate after the rename above (confirmed: the
+                // plain one was never actually used) — merge rather than
+                // leave two identical rows. Both are now named "Shoulder
+                // Press", so distinguish them by equipmentType: the loser
+                // was never touched by the rename map above and still holds
+                // the column's default ('Barbell'); the survivor was just
+                // explicitly set to 'Machine'. Matches what was verified
+                // against the real exported backup before writing this.
+                val loserId = queryExerciseIdByNameAndEquipment(db, "Shoulder Press", "Barbell")
+                val survivorId = queryExerciseIdByNameAndEquipment(db, "Shoulder Press", "Machine")
+                if (loserId != null && survivorId != null && loserId != survivorId) {
+                    mergeExercises(db, loserId, survivorId)
+                }
+            }
+        }
+
+        /** Re-points all logged history, templates, and saved order from
+         *  [loserId] to [survivorId], combines their PR records (keeping the
+         *  better of each metric), then deletes the loser. Handles the case
+         *  where session_exercise_order would otherwise hit a primary-key
+         *  collision (both exercises logged in the same session). */
+        private fun mergeExercises(db: SupportSQLiteDatabase, loserId: Long, survivorId: Long) {
+            db.execSQL("UPDATE exercise_logs SET exerciseId = ? WHERE exerciseId = ?", arrayOf(survivorId, loserId))
+            db.execSQL("UPDATE template_exercises SET exerciseId = ? WHERE exerciseId = ?", arrayOf(survivorId, loserId))
+
+            // Composite primary key (sessionId, exerciseId) — if the survivor
+            // already has an order row for a session, the loser's row for
+            // that same session would collide. Drop those first.
+            db.execSQL(
+                """DELETE FROM session_exercise_order
+                   WHERE exerciseId = ? AND sessionId IN (
+                       SELECT sessionId FROM session_exercise_order WHERE exerciseId = ?
+                   )""",
+                arrayOf(loserId, survivorId)
+            )
+            db.execSQL("UPDATE session_exercise_order SET exerciseId = ? WHERE exerciseId = ?", arrayOf(survivorId, loserId))
+
+            val loserRecord = queryRecord(db, loserId)
+            if (loserRecord != null) {
+                val survivorRecord = queryRecord(db, survivorId)
+                val merged = if (survivorRecord == null) loserRecord else combineRecords(survivorRecord, loserRecord)
+                db.execSQL("DELETE FROM exercise_records WHERE exerciseId IN (?, ?)", arrayOf(loserId, survivorId))
+                db.execSQL(
+                    """INSERT INTO exercise_records
+                       (exerciseId, maxWeightKg, maxWeightReps, maxWeightDate, maxVolumeKg, maxVolumeWeightKg, maxVolumeReps, maxVolumeDate)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                    arrayOf(
+                        survivorId, merged.maxWeightKg, merged.maxWeightReps, merged.maxWeightDate,
+                        merged.maxVolumeKg, merged.maxVolumeWeightKg, merged.maxVolumeReps, merged.maxVolumeDate
+                    )
+                )
+            }
+
+            db.execSQL("DELETE FROM exercises WHERE id = ?", arrayOf(loserId))
+        }
+
+        private data class RecordRow(
+            val maxWeightKg: Double, val maxWeightReps: Int, val maxWeightDate: Long,
+            val maxVolumeKg: Double, val maxVolumeWeightKg: Double, val maxVolumeReps: Int, val maxVolumeDate: Long
+        )
+
+        private fun queryExerciseIdByNameAndEquipment(db: SupportSQLiteDatabase, name: String, equipment: String): Long? {
+            val cursor = db.query("SELECT id FROM exercises WHERE name = ? AND equipmentType = ?", arrayOf(name, equipment))
+            val result = if (cursor.moveToFirst()) cursor.getLong(0) else null
+            cursor.close()
+            return result
+        }
+
+        private fun queryRecord(db: SupportSQLiteDatabase, exerciseId: Long): RecordRow? {
+            val cursor = db.query(
+                "SELECT maxWeightKg, maxWeightReps, maxWeightDate, maxVolumeKg, maxVolumeWeightKg, maxVolumeReps, maxVolumeDate FROM exercise_records WHERE exerciseId = ?",
+                arrayOf(exerciseId)
+            )
+            val result = if (cursor.moveToFirst()) {
+                RecordRow(
+                    cursor.getDouble(0), cursor.getInt(1), cursor.getLong(2),
+                    cursor.getDouble(3), cursor.getDouble(4), cursor.getInt(5), cursor.getLong(6)
+                )
+            } else null
+            cursor.close()
+            return result
+        }
+
+        private fun combineRecords(a: RecordRow, b: RecordRow): RecordRow {
+            val useAForWeight = a.maxWeightKg >= b.maxWeightKg
+            val useAForVolume = a.maxVolumeKg >= b.maxVolumeKg
+            return RecordRow(
+                maxWeightKg = if (useAForWeight) a.maxWeightKg else b.maxWeightKg,
+                maxWeightReps = if (useAForWeight) a.maxWeightReps else b.maxWeightReps,
+                maxWeightDate = if (useAForWeight) a.maxWeightDate else b.maxWeightDate,
+                maxVolumeKg = if (useAForVolume) a.maxVolumeKg else b.maxVolumeKg,
+                maxVolumeWeightKg = if (useAForVolume) a.maxVolumeWeightKg else b.maxVolumeWeightKg,
+                maxVolumeReps = if (useAForVolume) a.maxVolumeReps else b.maxVolumeReps,
+                maxVolumeDate = if (useAForVolume) a.maxVolumeDate else b.maxVolumeDate
+            )
+        }
+
 
 
         private fun addColumnIfMissing(
@@ -137,7 +307,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "gymtracker.db"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
                     .addCallback(object : Callback() {
                         override fun onCreate(db: SupportSQLiteDatabase) {
                             super.onCreate(db)
@@ -154,47 +324,45 @@ abstract class AppDatabase : RoomDatabase() {
         }
 
         private val seedExercises = listOf(
-            Exercise(name = "Bench Press", muscleGroup = "Chest"),
-            Exercise(name = "Bench Press (Smith)", muscleGroup = "Chest"),
-            Exercise(name = "Cable Fly", muscleGroup = "Chest"),
-            Exercise(name = "Incline Bench Press", muscleGroup = "Chest"),
-            Exercise(name = "Incline Bench Press (Dumbbell)", muscleGroup = "Chest"),
-            Exercise(name = "Incline Bench Press (Smith)", muscleGroup = "Chest"),
-            Exercise(name = "Incline Chest Press (Machine)", muscleGroup = "Chest"),
-            Exercise(name = "Incline Dumbbell Press", muscleGroup = "Chest"),
-            Exercise(name = "Incline Press", muscleGroup = "Chest"),
-            Exercise(name = "Iso-Lateral Chest Press (Machine)", muscleGroup = "Chest"),
-            Exercise(name = "Bent Over Row (Barbell)", muscleGroup = "Back"),
-            Exercise(name = "Bent Over Row - Underhand (Barbell)", muscleGroup = "Back"),
-            Exercise(name = "Lat Pulldown", muscleGroup = "Back"),
-            Exercise(name = "Pull-Up", muscleGroup = "Back"),
-            Exercise(name = "Seated Row", muscleGroup = "Back"),
-            Exercise(name = "Face Pull", muscleGroup = "Shoulders"),
-            Exercise(name = "Lateral Raise", muscleGroup = "Shoulders"),
-            Exercise(name = "Overhead Press (Barbell)", muscleGroup = "Shoulders"),
-            Exercise(name = "Overhead Press (Dumbbell)", muscleGroup = "Shoulders"),
-            Exercise(name = "Seated Overhead Press (Barbell)", muscleGroup = "Shoulders"),
-            Exercise(name = "Seated Overhead Press (Dumbell)", muscleGroup = "Shoulders"),
-            Exercise(name = "Shoulder Press", muscleGroup = "Shoulders"),
-            Exercise(name = "Shoulder Press (Machine)", muscleGroup = "Shoulders"),
-            Exercise(name = "Deadlift", muscleGroup = "Legs"),
-            Exercise(name = "Leg Curl", muscleGroup = "Legs"),
-            Exercise(name = "Leg Press", muscleGroup = "Legs"),
-            Exercise(name = "Romanian Deadlift", muscleGroup = "Legs"),
-            Exercise(name = "Squat", muscleGroup = "Legs"),
-            Exercise(name = "Bicep Curl (Barbell)", muscleGroup = "Arms"),
-            Exercise(name = "Bicep Curl (Cable)", muscleGroup = "Arms"),
-            Exercise(name = "Bicep Curl (Dumbbell)", muscleGroup = "Arms"),
-            Exercise(name = "Hammer Curl", muscleGroup = "Arms"),
-            Exercise(name = "Incline Curl (Dumbbell)", muscleGroup = "Arms"),
-            Exercise(name = "Preacher Curl (Machine)", muscleGroup = "Arms"),
-            Exercise(name = "Skull Crusher", muscleGroup = "Arms"),
-            Exercise(name = "Tricep Pushdown", muscleGroup = "Arms"),
-            Exercise(name = "Triceps Extension", muscleGroup = "Arms"),
-            Exercise(name = "Triceps Pushdown (Cable - Rope)", muscleGroup = "Arms"),
-            Exercise(name = "Cable Crunch", muscleGroup = "Core"),
-            Exercise(name = "Plank", muscleGroup = "Core"),
-            Exercise(name = "Weighted Planks", muscleGroup = "Core"),
+            Exercise(name = "Bench Press", muscleGroup = "Chest", equipmentType = "Barbell"),
+            Exercise(name = "Bench Press", muscleGroup = "Chest", equipmentType = "Smith Machine"),
+            Exercise(name = "Cable Fly", muscleGroup = "Chest", equipmentType = "Cable"),
+            Exercise(name = "Incline Bench Press", muscleGroup = "Chest", equipmentType = "Barbell"),
+            Exercise(name = "Incline Bench Press", muscleGroup = "Chest", equipmentType = "Dumbbell"),
+            Exercise(name = "Incline Bench Press", muscleGroup = "Chest", equipmentType = "Smith Machine"),
+            Exercise(name = "Incline Chest Press", muscleGroup = "Chest", equipmentType = "Machine"),
+            Exercise(name = "Incline Press", muscleGroup = "Chest", equipmentType = "Machine"),
+            Exercise(name = "Iso-Lateral Chest Press", muscleGroup = "Chest", equipmentType = "Machine"),
+            Exercise(name = "Bent Over Row", muscleGroup = "Back", equipmentType = "Barbell"),
+            Exercise(name = "Bent Over Row - Underhand", muscleGroup = "Back", equipmentType = "Barbell"),
+            Exercise(name = "Lat Pulldown", muscleGroup = "Back", equipmentType = "Cable"),
+            Exercise(name = "Pull-Up", muscleGroup = "Back", equipmentType = "Bodyweight"),
+            Exercise(name = "Seated Row", muscleGroup = "Back", equipmentType = "Cable"),
+            Exercise(name = "Face Pull", muscleGroup = "Shoulders", equipmentType = "Cable"),
+            Exercise(name = "Lateral Raise", muscleGroup = "Shoulders", equipmentType = "Dumbbell"),
+            Exercise(name = "Overhead Press", muscleGroup = "Shoulders", equipmentType = "Barbell"),
+            Exercise(name = "Overhead Press", muscleGroup = "Shoulders", equipmentType = "Dumbbell"),
+            Exercise(name = "Seated Overhead Press", muscleGroup = "Shoulders", equipmentType = "Barbell"),
+            Exercise(name = "Seated Overhead Press", muscleGroup = "Shoulders", equipmentType = "Dumbbell"),
+            Exercise(name = "Shoulder Press", muscleGroup = "Shoulders", equipmentType = "Machine"),
+            Exercise(name = "Deadlift", muscleGroup = "Legs", equipmentType = "Barbell"),
+            Exercise(name = "Leg Curl", muscleGroup = "Legs", equipmentType = "Machine"),
+            Exercise(name = "Leg Press", muscleGroup = "Legs", equipmentType = "Machine"),
+            Exercise(name = "Romanian Deadlift", muscleGroup = "Legs", equipmentType = "Barbell"),
+            Exercise(name = "Squat", muscleGroup = "Legs", equipmentType = "Barbell"),
+            Exercise(name = "Bicep Curl", muscleGroup = "Arms", equipmentType = "Barbell"),
+            Exercise(name = "Bicep Curl", muscleGroup = "Arms", equipmentType = "Cable"),
+            Exercise(name = "Bicep Curl", muscleGroup = "Arms", equipmentType = "Dumbbell"),
+            Exercise(name = "Hammer Curl", muscleGroup = "Arms", equipmentType = "Dumbbell"),
+            Exercise(name = "Incline Curl", muscleGroup = "Arms", equipmentType = "Dumbbell"),
+            Exercise(name = "Preacher Curl", muscleGroup = "Arms", equipmentType = "Machine"),
+            Exercise(name = "Skull Crusher", muscleGroup = "Arms", equipmentType = "Barbell"),
+            Exercise(name = "Tricep Pushdown", muscleGroup = "Arms", equipmentType = "Cable"),
+            Exercise(name = "Triceps Extension", muscleGroup = "Arms", equipmentType = "Dumbbell"),
+            Exercise(name = "Triceps Pushdown (Rope)", muscleGroup = "Arms", equipmentType = "Cable"),
+            Exercise(name = "Cable Crunch", muscleGroup = "Core", equipmentType = "Cable"),
+            Exercise(name = "Plank", muscleGroup = "Core", equipmentType = "Bodyweight"),
+            Exercise(name = "Weighted Planks", muscleGroup = "Core", equipmentType = "Bodyweight"),
         )
     }
 }

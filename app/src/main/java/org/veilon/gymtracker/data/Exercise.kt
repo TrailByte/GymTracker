@@ -8,5 +8,6 @@ data class Exercise(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
     val muscleGroup: String,
+    val equipmentType: String = "Barbell",
     val archived: Boolean = false
 )
