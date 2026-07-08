@@ -56,6 +56,14 @@ interface WorkoutDao {
     @Query("SELECT * FROM exercise_logs WHERE completed = 1")
     suspend fun getAllCompletedLogsOnce(): List<ExerciseLog>
 
+    // Real SQL aggregate — SQLite sums across all matching rows without Room
+    // ever deserializing them into ExerciseLog objects. Flat cost regardless
+    // of history size, unlike pulling every row into memory and summing in
+    // Kotlin. Returns null (not 0) if there are zero completed sets — the
+    // caller coalesces that.
+    @Query("SELECT SUM(weight * reps) FROM exercise_logs WHERE completed = 1")
+    suspend fun getTotalCompletedVolume(): Double?
+
     @Query("SELECT * FROM session_exercise_order WHERE sessionId = :sessionId ORDER BY orderIndex ASC")
     fun getExerciseOrder(sessionId: Long): Flow<List<SessionExerciseOrder>>
 

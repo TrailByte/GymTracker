@@ -70,8 +70,7 @@ object GamificationEngine {
         val sessions = db.workoutDao().getAllSessions().first()
         celebrations += checkThresholdAchievements(context, AchievementType.WORKOUT_COUNT, sessions.size.toLong())
 
-        val logs = db.workoutDao().getAllCompletedLogsOnce()
-        val totalVolume = logs.sumOf { it.weight * it.reps }
+        val totalVolume = db.workoutDao().getTotalCompletedVolume() ?: 0.0
         celebrations += checkThresholdAchievements(context, AchievementType.LIFETIME_VOLUME_KG, totalVolume.toLong())
 
         val weeklyGoal = UserPreferences.weeklyGoal(context).first()
